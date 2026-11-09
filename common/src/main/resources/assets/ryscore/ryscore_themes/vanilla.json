@@ -48,6 +48,7 @@
     "hud.fg": "#ffffff"
   },
   "metrics": {
+    "sidebar.flush": 1,
     "panel.radius": 0,
     "card.radius": 0,
     "slot.radius": 0,

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.gui.GuiGraphics;
 import works.repka.ryscore.ui.Draw;
+import works.repka.ryscore.ui.Tiles;
 
 /**
  * Тема: только токены (цвета, размеры, эффекты). Дерево виджетов у всех тем одно,
@@ -55,6 +56,8 @@ public final class Theme {
         fb("panel.bevel.dark", "panel.border");
         fb("slot.bevel.light", "slot.border");
         fb("slot.bevel.dark", "slot.border");
+        fb("slot.have.border", "state.ok");
+        fb("slot.miss.border", "state.warn");
     }
 
     private static void fb(String key, String fallback) {
@@ -68,6 +71,10 @@ public final class Theme {
     private final Map<String, Integer> resolved = new HashMap<>();
     public final boolean shadow;
     public final boolean pillTabs;
+    /** Вкладки разделов подчёркиваются, а не заливаются. */
+    public final boolean lineTabs;
+    /** Боковая панель прижата к краю экрана на всю высоту. */
+    public final boolean flushSidebar;
     public final boolean reducedMotion;
 
     public Theme(String id, JsonObject json) {
@@ -93,16 +100,21 @@ public final class Theme {
             Integer base = colors.get(key);
             if (base != null) colors.put(key, Draw.alpha(base, a.getValue()));
         }
-        boolean pill = false;
+        boolean pill = false, line = false;
         if (json.has("metrics")) {
             for (Map.Entry<String, JsonElement> e : json.getAsJsonObject("metrics").entrySet()) {
                 JsonElement v = e.getValue();
                 if (!v.isJsonPrimitive()) continue;
                 if (v.getAsJsonPrimitive().isNumber()) metrics.put(e.getKey(), v.getAsFloat());
-                else if (e.getKey().equals("tab.style")) pill = v.getAsString().equals("pill");
+                else if (e.getKey().equals("tab.style")) {
+                    pill = v.getAsString().equals("pill");
+                    line = v.getAsString().equals("underline");
+                }
             }
         }
         this.pillTabs = pill;
+        this.lineTabs = line;
+        this.flushSidebar = m("sidebar.flush", 0) > 0;
         JsonObject fx = json.has("effects") ? json.getAsJsonObject("effects") : new JsonObject();
         this.shadow = fx.has("shadow") && fx.get("shadow").getAsBoolean();
         this.reducedMotion = fx.has("animations") && !fx.get("animations").getAsString().equals("normal");
@@ -171,6 +183,16 @@ public final class Theme {
         Draw.roundBox(g, x, y, w, h, r, c("panel.bg"), c("panel.border"));
     }
 
+    /** Боковая панель: у темы с прижатой панелью без скруглений и тени, с линией вдоль внутреннего края. */
+    public void sidebar(GuiGraphics g, int x, int y, int w, int h) {
+        if (!flushSidebar) {
+            panel(g, x, y, w, h);
+            return;
+        }
+        Draw.rect(g, x, y, w, h, c("sidebar.bg"));
+        Draw.rect(g, x, y, 1, h, beveled() ? c("panel.bevel.light") : c("panel.border"));
+    }
+
     public void card(GuiGraphics g, int x, int y, int w, int h) {
         if (beveled()) {
             Draw.bevel(g, x, y, w, h, c("card.bg"), c("panel.bevel.dark"), c("panel.bevel.light"), 1, false);
@@ -196,6 +218,30 @@ public final class Theme {
         }
         float r = r("slot.radius");
         Draw.roundBox(g, x, y, size, size, r, c("slot.bg"), hovered ? c("accent") : c("slot.border"));
+    }
+
+    /** Слот с рамкой состояния, например «есть в инвентаре» и «не хватает». border = 0 даёт обычный слот. */
+    public void slot(GuiGraphics g, int x, int y, int size, boolean hovered, int border) {
+        if (border == 0 || hovered) {
+            slot(g, x, y, size, hovered);
+            return;
+        }
+        if (beveled()) {
+            slot(g, x, y, size, false);
+            Draw.rect(g, x + 1, y + 1, size - 2, size - 2, Draw.alpha(border, 0.35f));
+            return;
+        }
+        Draw.roundBox(g, x, y, size, size, r("slot.radius"), c("slot.bg"), border);
+    }
+
+    /** Много одинаковых слотов за один вызов отрисовки: для длинных списков. */
+    public void slots(GuiGraphics g, int size, int[] xy, int count) {
+        slots(g, size, xy, count, c("slot.border"));
+    }
+
+    public void slots(GuiGraphics g, int size, int[] xy, int count, int border) {
+        Tiles.draw(g, size, new Tiles.Style(beveled() ? 0 : r("slot.radius"), c("slot.bg"), border,
+            c("slot.bevel.light"), c("slot.bevel.dark"), beveled()), xy, count);
     }
 
     /** Подсветка ячейки списка предметов под курсором (без рамки слота). */
@@ -242,6 +288,21 @@ public final class Theme {
         int fill = active ? c("tab.active.bg") : c("tab.inactive.bg");
         if (hovered && !active) fill = Draw.mix(fill, c("text.primary"), 0.08f);
         Draw.roundBox(g, x, y, w, h, r, fill, active ? 0 : c("button.border"));
+    }
+
+    /** Вкладка раздела окна. Где тема подчёркивает вкладки, активная отмечена линией акцента, иначе обычная вкладка. */
+    public void tabLine(GuiGraphics g, int x, int y, int w, int h, boolean active, boolean hovered) {
+        if (!lineTabs || beveled()) {
+            tab(g, x, y, w, h, active, hovered);
+            return;
+        }
+        if (active) Draw.round(g, x, y + h - 2, w, 2, 0.5f, c("accent"));
+    }
+
+    /** Цвет текста на вкладке раздела. */
+    public int tabLineFg(boolean active, boolean hovered) {
+        if (!lineTabs || beveled()) return active ? c("tab.active.fg") : c("tab.inactive.fg");
+        return active || hovered ? c("text.primary") : c("text.muted");
     }
 
     public void chip(GuiGraphics g, int x, int y, int w, int h, String kind) {

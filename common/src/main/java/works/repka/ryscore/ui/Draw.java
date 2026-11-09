@@ -88,9 +88,10 @@ public final class Draw {
     /** Мягкая тень под панелью. */
     public static void shadow(GuiGraphics g, float x, float y, float w, float h, float radius, float strength) {
         if (strength <= 0) return;
-        for (int i = 4; i >= 1; i--) {
-            float e = i * 1.5f;
-            round(g, x - e, y - e + 2.5f, w + e * 2, h + e * 2, radius + e, alpha(0xFF000000, strength * 0.09f));
+        // много слабых слоёв: при четырёх вокруг панели видно ступенчатое кольцо
+        for (int i = 10; i >= 1; i--) {
+            float e = i * 0.8f;
+            round(g, x - e, y - e + 3f, w + e * 2, h + e * 2, radius + e, alpha(0xFF000000, strength * 0.045f));
         }
     }
 
@@ -140,6 +141,37 @@ public final class Draw {
         for (int i = 0; i < 5; i++) {
             rect(g, x + w - 5 + i, mid - 4 + i, 1, 10 - i * 2, argb);
         }
+    }
+
+    /** Лупа 9×9 для полей поиска. */
+    public static void magnifier(GuiGraphics g, int x, int y, int color) {
+        roundBorder(g, x, y, 7, 7, 3.5f, color, 1f);
+        for (int i = 0; i < 3; i++) rect(g, x + 6 + i, y + 6 + i, 1, 1, color);
+    }
+
+    /** Крестик 7×7 «закрыть». */
+    public static void cross(GuiGraphics g, int x, int y, int color) {
+        for (int i = 0; i < 7; i++) {
+            rect(g, x + i, y + i, 1, 1, color);
+            rect(g, x + 6 - i, y + i, 1, 1, color);
+        }
+    }
+
+    /** Звезда 9×9: закладка. Пустая рисуется контуром. */
+    public static void star(GuiGraphics g, int x, int y, boolean filled, int color) {
+        final String[] shape = {"....#....", "....#....", "...#.#...", "####.####", ".#.....#.", "..#...#..", "..#.#.#..", ".#.#.#.#.", ".##...##."};
+        final String[] solid = {"....#....", "....#....", "...###...", "#########", ".#######.", "..#####..", "..#####..", ".###.###.", ".##...##."};
+        String[] rows = filled ? solid : shape;
+        for (int row = 0; row < rows.length; row++) {
+            for (int col = 0; col < 9; col++) {
+                if (rows[row].charAt(col) == '#') rect(g, x + col, y + row, 1, 1, color);
+            }
+        }
+    }
+
+    /** Круглая точка статуса. */
+    public static void dot(GuiGraphics g, int x, int y, int size, int color) {
+        round(g, x, y, size, size, size / 2f, color);
     }
 
     /** Замок 7×8: дужка и корпус. */
