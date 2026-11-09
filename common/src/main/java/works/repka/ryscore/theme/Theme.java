@@ -95,7 +95,6 @@ public final class Theme {
     public final boolean shadow;
     public final boolean pillTabs;
     /** Вкладки разделов подчёркиваются, а не заливаются. */
-    public final boolean lineTabs;
     /** Боковая панель прижата к краю экрана на всю высоту. */
     public final boolean flushSidebar;
     private final boolean type;
@@ -124,7 +123,7 @@ public final class Theme {
             Integer base = colors.get(key);
             if (base != null) colors.put(key, Draw.alpha(base, a.getValue()));
         }
-        boolean pill = false, line = false;
+        boolean pill = false;
         if (json.has("metrics")) {
             for (Map.Entry<String, JsonElement> e : json.getAsJsonObject("metrics").entrySet()) {
                 JsonElement v = e.getValue();
@@ -132,12 +131,10 @@ public final class Theme {
                 if (v.getAsJsonPrimitive().isNumber()) metrics.put(e.getKey(), v.getAsFloat());
                 else if (e.getKey().equals("tab.style")) {
                     pill = v.getAsString().equals("pill");
-                    line = v.getAsString().equals("underline");
                 }
             }
         }
         this.pillTabs = pill;
-        this.lineTabs = line;
         this.flushSidebar = m("sidebar.flush", 0) > 0;
         this.type = json.has("font") && json.get("font").getAsString().equals("ryscore:inter");
         JsonObject fx = json.has("effects") ? json.getAsJsonObject("effects") : new JsonObject();
@@ -337,7 +334,7 @@ public final class Theme {
 
     /** Вкладка раздела окна. Где тема подчёркивает вкладки, активная отмечена линией акцента, иначе обычная вкладка. */
     public void tabLine(GuiGraphics g, int x, int y, int w, int h, boolean active, boolean hovered) {
-        if (!lineTabs || beveled()) {
+        if (beveled()) {
             tab(g, x, y, w, h, active, hovered);
             return;
         }
@@ -346,7 +343,7 @@ public final class Theme {
 
     /** Цвет текста на вкладке раздела. */
     public int tabLineFg(boolean active, boolean hovered) {
-        if (!lineTabs || beveled()) return active ? c("tab.active.fg") : c("tab.inactive.fg");
+        if (beveled()) return active ? c("tab.active.fg") : c("tab.inactive.fg");
         return active || hovered ? c("text.primary") : c("text.muted");
     }
 

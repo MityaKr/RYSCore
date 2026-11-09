@@ -18,7 +18,7 @@ import org.joml.Matrix4f;
 
 /** Значки из макетов: фигура задаётся формулой и рисуется в пикселях экрана, поэтому гладкая на любом масштабе. */
 public final class Icons {
-    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK }
+    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK, PLUS, PIN }
 
     private record Key(Shape shape, int pixels) {}
 
@@ -77,6 +77,9 @@ public final class Icons {
     private static boolean inside(Shape shape, double u, double v) {
         return switch (shape) {
             case STAR -> star(u, v);
+            case PLUS -> segment(u, v, 0.5, 0.16, 0.5, 0.84) < 0.075 || segment(u, v, 0.16, 0.5, 0.84, 0.5) < 0.075;
+            case PIN -> (v > 0.12 && v < 0.2 && u > 0.28 && u < 0.72) || (v >= 0.2 && v < 0.5 && u > 0.37 && u < 0.63)
+                || (v >= 0.5 && v < 0.6 && u > 0.2 && u < 0.8) || segment(u, v, 0.5, 0.6, 0.5, 0.92) < 0.04;
             case CHECK -> segment(u, v, 0.18, 0.54, 0.42, 0.78) < 0.08 || segment(u, v, 0.42, 0.78, 0.84, 0.26) < 0.08;
             case ARROW -> segment(u, v, 0.14, 0.5, 0.86, 0.5) < 0.04 || segment(u, v, 0.62, 0.27, 0.86, 0.5) < 0.04 || segment(u, v, 0.62, 0.73, 0.86, 0.5) < 0.04;
             case CROSS -> segment(u, v, 0.2, 0.2, 0.8, 0.8) < 0.055 || segment(u, v, 0.8, 0.2, 0.2, 0.8) < 0.055;
