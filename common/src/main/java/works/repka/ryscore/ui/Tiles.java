@@ -34,9 +34,9 @@ public final class Tiles {
     private Tiles() {}
 
     /** @param xy координаты левых верхних углов подряд: x0, y0, x1, y1… в единицах GUI */
-    public static void draw(GuiGraphics g, int size, Style style, int[] xy, int count) {
+    public static void draw(GuiGraphics g, float size, Style style, int[] xy, int count) {
         if (count <= 0) return;
-        int pixels = (int) Math.round(size * Draw.scale());
+        int pixels = Math.round(size * (float) Draw.scale());
         ResourceLocation texture = texture(pixels, style);
         g.flush();
         RenderSystem.setShaderTexture(0, texture);

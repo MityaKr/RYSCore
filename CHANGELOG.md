@@ -1,5 +1,9 @@
 # История RYSCore
 
+## 1.4.0
+
+Текст по макетам: `ui.Type` рисует Inter 400, 500 и 600 в пикселях экрана, `Draw.label` принимает кегль макета. В темах Slate и Glass шрифт `ryscore:inter`, `Draw.text` и `Draw.width` работают в нём сами. Измерять текст только через `Draw.width`, `Draw.widthScaled`, `Draw.labelWidth`: шрифт игры даёт другую ширину. `ui.Field` поле ввода с чипами, `ui.Icons` гладкие значки, `Theme.cells`, `slotRounded`. Радиусы считаются как макет ÷ 2, тень как в макете. Inter распространяется по SIL OFL 1.1.
+
 ## 1.3.0
 
 `team.TeamCards`: карточки сводки на экране команды. Запасные токены `hud.fg` и `tooltip.fg` (запрос RYSQuests).

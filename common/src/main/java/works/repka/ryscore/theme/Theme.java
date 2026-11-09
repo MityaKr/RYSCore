@@ -13,8 +13,8 @@ import works.repka.ryscore.ui.Tiles;
  * тема не может менять раскладку.
  */
 public final class Theme {
-    /** Во сколько раз пиксель макета меньше пикселя GUI: в макетах слот 40 px, в игре 18. */
-    private static final float DESIGN_SCALE = 2.2f;
+    /** Макеты рассчитаны на окно 1280×800 при GUI Scale 2: в одной единице GUI два пикселя макета. */
+    private static final float DESIGN_SCALE = 2f;
 
     private static final Map<String, String> FALLBACK = new HashMap<>();
 
@@ -58,6 +58,14 @@ public final class Theme {
         fb("slot.bevel.dark", "slot.border");
         fb("slot.have.border", "state.ok");
         fb("hud.fg", "text.primary");
+        fb("cell.bg", "slot.bg");
+        fb("cell.border", "slot.border");
+        fb("cell.mark.border", "cell.border");
+        fb("filter.active.bg", "button.bg");
+        fb("status.bg", "panel.bg");
+        fb("status.border", "panel.border");
+        fb("text.secondary", "text.body");
+        fb("button.fg", "text.body");
         fb("tooltip.fg", "text.primary");
         fb("slot.miss.border", "state.warn");
     }
@@ -77,6 +85,7 @@ public final class Theme {
     public final boolean lineTabs;
     /** Боковая панель прижата к краю экрана на всю высоту. */
     public final boolean flushSidebar;
+    private final boolean type;
     public final boolean reducedMotion;
 
     public Theme(String id, JsonObject json) {
@@ -117,6 +126,7 @@ public final class Theme {
         this.pillTabs = pill;
         this.lineTabs = line;
         this.flushSidebar = m("sidebar.flush", 0) > 0;
+        this.type = json.has("font") && json.get("font").getAsString().equals("ryscore:inter");
         JsonObject fx = json.has("effects") ? json.getAsJsonObject("effects") : new JsonObject();
         this.shadow = fx.has("shadow") && fx.get("shadow").getAsBoolean();
         this.reducedMotion = fx.has("animations") && !fx.get("animations").getAsString().equals("normal");
@@ -165,6 +175,11 @@ public final class Theme {
     /** Радиус токена в единицах GUI. */
     public float r(String key) {
         return Math.min(m(key, 0), 40f) / DESIGN_SCALE;
+    }
+
+    /** Рисует ли тема текст шрифтом из макета, а не шрифтом игры. */
+    public boolean usesType() {
+        return type;
     }
 
     public boolean beveled() {
@@ -236,6 +251,21 @@ public final class Theme {
         Draw.roundBox(g, x, y, size, size, r("slot.radius"), c("slot.bg"), border);
     }
 
+    /** Ячейка списка предметов по макету: свой фон и рамка, размер в единицах GUI может быть дробным. */
+    public void cells(GuiGraphics g, float size, int[] xy, int count, int border) {
+        Tiles.draw(g, size, new Tiles.Style(beveled() ? 0 : m("cell.radius", 7f) / DESIGN_SCALE, c("cell.bg"), border,
+            c("slot.bevel.light"), c("slot.bevel.dark"), beveled()), xy, count);
+    }
+
+    /** Слот рецепта по макету: радиус в пикселях макета (сетка 8, результат 10). */
+    public void slotRounded(GuiGraphics g, int x, int y, int size, float radiusPx, boolean hovered, int border) {
+        if (beveled()) {
+            slot(g, x, y, size, hovered, border);
+            return;
+        }
+        Draw.roundBox(g, x, y, size, size, radiusPx / DESIGN_SCALE, c("slot.bg"), hovered ? c("accent") : border == 0 ? c("card.border") : border);
+    }
+
     /** Много одинаковых слотов за один вызов отрисовки: для длинных списков. */
     public void slots(GuiGraphics g, int size, int[] xy, int count) {
         slots(g, size, xy, count, c("slot.border"));
@@ -298,7 +328,7 @@ public final class Theme {
             tab(g, x, y, w, h, active, hovered);
             return;
         }
-        if (active) Draw.round(g, x, y + h - 2, w, 2, 0.5f, c("accent"));
+        if (active) Draw.round(g, x, y + h - 1, w, 1, 0.02f, c("accent"));
     }
 
     /** Цвет текста на вкладке раздела. */

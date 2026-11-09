@@ -1,7 +1,7 @@
 {
   "id": "ryscore:glass",
   "name": "Glass",
-  "font": "minecraft:default",
+  "font": "ryscore:inter",
   "colors": {
     "overlay": "#0a141e",
     "overlay.alpha": 0.35,
