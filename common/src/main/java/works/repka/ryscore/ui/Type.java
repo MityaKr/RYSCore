@@ -61,13 +61,29 @@ public final class Type {
         final DynamicTexture texture;
         final ResourceLocation id;
         int x, y, row;
-        boolean dirty;
+        /** Изменённая область: загружается только она, полная страница весит 4 МБ. */
+        int dirtyX0 = PAGE, dirtyY0 = PAGE, dirtyX1, dirtyY1;
 
         Page(int index) {
             texture = new DynamicTexture(new NativeImage(PAGE, PAGE, true));
             texture.getPixels().fillRect(0, 0, PAGE, PAGE, 0x00FFFFFF);
             id = ResourceLocation.fromNamespaceAndPath("ryscore", "type/" + index + "_" + Integer.toHexString(System.identityHashCode(this)));
             Minecraft.getInstance().getTextureManager().register(id, texture);
+        }
+
+        void mark(int left, int top, int w, int h) {
+            dirtyX0 = Math.min(dirtyX0, left);
+            dirtyY0 = Math.min(dirtyY0, top);
+            dirtyX1 = Math.max(dirtyX1, left + w);
+            dirtyY1 = Math.max(dirtyY1, top + h);
+        }
+
+        void upload() {
+            if (dirtyX1 <= dirtyX0) return;
+            texture.bind();
+            texture.getPixels().upload(0, dirtyX0, dirtyY0, dirtyX0, dirtyY0, dirtyX1 - dirtyX0, dirtyY1 - dirtyY0, false, false);
+            dirtyX0 = dirtyY0 = PAGE;
+            dirtyX1 = dirtyY1 = 0;
         }
     }
 
@@ -76,6 +92,8 @@ public final class Type {
     private static final List<Page> PAGES = new ArrayList<>();
     private static final byte[] GAMMA_TABLE = new byte[256];
     private static boolean failed;
+    /** Растёт при сбросе атласа: глифы, найденные до сброса, больше не действительны. */
+    private static int generation;
 
     static {
         for (int i = 0; i < 256; i++) GAMMA_TABLE[i] = (byte) Math.round(255 * Math.pow(i / 255.0, GAMMA));
@@ -136,6 +154,7 @@ public final class Type {
     /** Ширина кодовой точки в единицах GUI: не зависит от масштаба. */
     public static float advance(int codepoint, float designPx, Weight weight) {
         Face face = faceOf(weight, codepoint);
+        if (face == null && symbol(codepoint) != null) return em(designPx);
         if (face == null) return Minecraft.getInstance().font.width(Character.toString(codepoint)) * em(designPx) / 8f;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer adv = stack.mallocInt(1), lsb = stack.mallocInt(1);
@@ -165,6 +184,7 @@ public final class Type {
         List<Quad> quads = new ArrayList<>(text.length());
         float pen = (float) (x * scale);
         List<Runnable> fallback = null;
+        int started = generation;
         for (int i = 0; i < text.length(); ) {
             int cp = text.codePointAt(i);
             i += Character.charCount(cp);
@@ -173,7 +193,7 @@ public final class Type {
                 final float at = (float) (pen / scale);
                 final String s = Character.toString(cp);
                 if (fallback == null) fallback = new ArrayList<>();
-                fallback.add(() -> drawVanilla(g, s, at, centerY, designPx, argb));
+                fallback.add(() -> drawMissing(g, s, at, centerY, designPx, argb));
                 pen += (float) (advance(cp, designPx, weight) * scale);
                 continue;
             }
@@ -183,13 +203,12 @@ public final class Type {
             if (glyph != null) quads.add(new Quad(glyph, whole, baseline));
             pen += (float) (advance(cp, designPx, weight) * scale);
         }
-        g.flush();
-        for (Page page : PAGES) {
-            if (page.dirty) {
-                page.texture.upload();
-                page.dirty = false;
-            }
+        if (generation != started) {
+            draw(g, text, x, centerY, designPx, weight, argb);
+            return;
         }
+        g.flush();
+        for (Page page : PAGES) page.upload();
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -214,6 +233,36 @@ public final class Type {
         }
         RenderSystem.disableBlend();
         if (fallback != null) fallback.forEach(Runnable::run);
+    }
+
+    private record Symbol(Icons.Shape shape, float degrees) {}
+
+    /** Знаки, которых нет в шрифте: пиксельный глиф при малом кегле теряет форму, поэтому они рисуются значками. */
+    private static @org.jetbrains.annotations.Nullable Symbol symbol(int cp) {
+        return switch (cp) {
+            case '✓', '✔' -> new Symbol(Icons.Shape.CHECK, 0);
+            case '✕', '✖', '✗' -> new Symbol(Icons.Shape.CROSS, 0);
+            case '★' -> new Symbol(Icons.Shape.STAR, 0);
+            case '→' -> new Symbol(Icons.Shape.ARROW, 0);
+            case '↘' -> new Symbol(Icons.Shape.ARROW, 45);
+            case '↓' -> new Symbol(Icons.Shape.ARROW, 90);
+            case '↙' -> new Symbol(Icons.Shape.ARROW, 135);
+            case '←' -> new Symbol(Icons.Shape.ARROW, 180);
+            case '↖' -> new Symbol(Icons.Shape.ARROW, 225);
+            case '↑' -> new Symbol(Icons.Shape.ARROW, 270);
+            case '↗' -> new Symbol(Icons.Shape.ARROW, 315);
+            default -> null;
+        };
+    }
+
+    private static void drawMissing(GuiGraphics g, String s, float x, float centerY, float designPx, int argb) {
+        Symbol symbol = symbol(s.codePointAt(0));
+        if (symbol == null) {
+            drawVanilla(g, s, x, centerY, designPx, argb);
+            return;
+        }
+        float size = em(designPx);
+        Icons.drawRotated(g, symbol.shape(), x, centerY - size / 2f, size, symbol.degrees(), argb);
     }
 
     private static void drawVanilla(GuiGraphics g, String s, float x, float centerY, float designPx, int argb) {
@@ -262,7 +311,7 @@ public final class Type {
         } finally {
             MemoryUtil.memFree(bitmap);
         }
-        page.dirty = true;
+        page.mark(spot[1], spot[2], w, h);
         Glyph glyph = new Glyph(spot[0], spot[1] / (float) PAGE, spot[2] / (float) PAGE, (spot[1] + w) / (float) PAGE, (spot[2] + h) / (float) PAGE, w, h, x0, y0);
         GLYPHS.put(key, glyph);
         return glyph;
@@ -283,6 +332,7 @@ public final class Type {
                 for (Page old : PAGES) Minecraft.getInstance().getTextureManager().release(old.id);
                 PAGES.clear();
                 GLYPHS.clear();
+                generation++;
             }
             PAGES.add(new Page(PAGES.size()));
             page = PAGES.get(PAGES.size() - 1);
