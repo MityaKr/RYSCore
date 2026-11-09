@@ -1,0 +1,59 @@
+plugins {
+    id 'net.neoforged.moddev'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = "${mod_id}-neoforge"
+}
+
+neoForge {
+    version = neoforge_version
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// Общий код подключается исходниками: один jar, один набор классов.
+sourceSets.main {
+    java.srcDir project(':common').file('src/main/java')
+    resources.srcDir project(':common').file('src/main/resources')
+}
+
+dependencies {
+    compileOnly 'org.jetbrains:annotations:26.0.1'
+}
+
+processResources {
+    def props = [
+        mod_id: mod_id, mod_name: mod_name, mod_version: mod_version,
+        mod_authors: mod_authors, mod_license: mod_license,
+        minecraft_version: minecraft_version
+    ]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+}
+
+// gradlew publish кладёт jar в repo/: оттуда его берут моды семьи при сборке.
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = "${mod_id}-neoforge"
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            name = 'family'
+            url = rootProject.file('repo')
+        }
+    }
+}
