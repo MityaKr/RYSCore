@@ -57,6 +57,8 @@ public final class Theme {
         fb("slot.bevel.light", "slot.border");
         fb("slot.bevel.dark", "slot.border");
         fb("slot.have.border", "state.ok");
+        fb("hud.fg", "text.primary");
+        fb("tooltip.fg", "text.primary");
         fb("slot.miss.border", "state.warn");
     }
 
