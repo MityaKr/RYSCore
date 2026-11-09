@@ -34,7 +34,9 @@ import org.lwjgl.system.MemoryUtil;
  */
 public final class Type {
     public enum Weight {
-        REGULAR(400), MEDIUM(500), SEMIBOLD(600);
+        REGULAR(400), MEDIUM(500), SEMIBOLD(600),
+        /** Заголовки макетов: Space Grotesk 600 для латиницы, для остального Inter 600. */
+        DISPLAY(600);
 
         final int value;
 
@@ -84,6 +86,10 @@ public final class Type {
     private static List<Face> faces(Weight weight) {
         return FACES.computeIfAbsent(weight, w -> {
             List<Face> list = new ArrayList<>();
+            if (w == Weight.DISPLAY) {
+                Face display = load("/assets/ryscore/fonts/spacegrotesk_latin_600.ttf");
+                if (display != null) list.add(display);
+            }
             for (String part : new String[] {"latin", "cyrillic"}) {
                 Face face = load("/assets/ryscore/fonts/inter_" + part + "_" + w.value + ".ttf");
                 if (face != null) list.add(face);

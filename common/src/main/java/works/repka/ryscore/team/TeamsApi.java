@@ -52,6 +52,23 @@ public interface TeamsApi {
 
     void post(UUID team, Post post);
 
+    /** Данные мода на команду. Null, если записи нет. Без RYSTeams хранилища нет. */
+    @Nullable
+    default net.minecraft.nbt.CompoundTag getData(UUID team, ResourceLocation key) {
+        return null;
+    }
+
+    default void putData(UUID team, ResourceLocation key, net.minecraft.nbt.CompoundTag value) {}
+
+    /** Чем занят игрок: показывается участникам его команды, пустая строка убирает. */
+    default void setStatus(UUID player, String status) {}
+
+    /** Дело на доске команды от мода, например «принести медь ×64». */
+    default void addTodo(UUID team, ResourceLocation source, String text) {}
+
+    /** Пинг команде в мировых координатах: сюда, опасно, ресурс, помогите. */
+    default void ping(UUID team, String dimension, int x, int y, int z, String kind, String by) {}
+
     default boolean isSolo(UUID team) {
         return members(team).size() <= 1;
     }

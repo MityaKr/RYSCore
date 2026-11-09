@@ -18,7 +18,7 @@ import org.joml.Matrix4f;
 
 /** Значки из макетов: фигура задаётся формулой и рисуется в пикселях экрана, поэтому гладкая на любом масштабе. */
 public final class Icons {
-    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW }
+    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK }
 
     private record Key(Shape shape, int pixels) {}
 
@@ -45,6 +45,15 @@ public final class Icons {
         RenderSystem.disableBlend();
     }
 
+    /** Значок, повёрнутый вокруг центра на {@code degrees}: стрелка направления. */
+    public static void drawRotated(GuiGraphics g, Shape shape, float x, float y, float size, float degrees, int argb) {
+        g.pose().pushPose();
+        g.pose().translate(x + size / 2f, y + size / 2f, 0);
+        g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(degrees));
+        draw(g, shape, -size / 2f, -size / 2f, size, argb);
+        g.pose().popPose();
+    }
+
     private static ResourceLocation paint(Key key) {
         int n = key.pixels;
         NativeImage image = new NativeImage(n, n, true);
@@ -68,6 +77,7 @@ public final class Icons {
     private static boolean inside(Shape shape, double u, double v) {
         return switch (shape) {
             case STAR -> star(u, v);
+            case CHECK -> segment(u, v, 0.18, 0.54, 0.42, 0.78) < 0.08 || segment(u, v, 0.42, 0.78, 0.84, 0.26) < 0.08;
             case ARROW -> segment(u, v, 0.14, 0.5, 0.86, 0.5) < 0.04 || segment(u, v, 0.62, 0.27, 0.86, 0.5) < 0.04 || segment(u, v, 0.62, 0.73, 0.86, 0.5) < 0.04;
             case CROSS -> segment(u, v, 0.2, 0.2, 0.8, 0.8) < 0.055 || segment(u, v, 0.8, 0.2, 0.2, 0.8) < 0.055;
             case MAGNIFIER -> {

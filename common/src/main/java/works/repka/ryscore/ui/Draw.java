@@ -90,7 +90,7 @@ public final class Draw {
     public static void shadow(GuiGraphics g, float x, float y, float w, float h, float radius, float strength) {
         if (strength <= 0) return;
         // как box-shadow: 0 30px 80px rgba(0,0,0,.55) в макете, при strength 1
-        int layers = 14;
+        int layers = 28;
         float spread = 20f * strength, offset = 15f * strength;
         for (int i = 0; i < layers; i++) {
             float t = (i + 0.5f) / layers;
