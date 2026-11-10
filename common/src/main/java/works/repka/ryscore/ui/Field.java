@@ -92,7 +92,7 @@ public class Field extends EditBox {
         if (end - view > inner - 2) view = end - inner + 2;
         if (end - view < 0) view = end;
         if (x[value.length()] - view < inner - 2) view = Math.max(0, x[value.length()] - inner + 2);
-        g.enableScissor(getX() - 1, getY() - 3, getX() + inner + 1, getY() + getHeight() + 3);
+        Draw.scissor(g, getX() - 1, getY() - 3, getX() + inner + 1, getY() + getHeight() + 3);
         float origin = left - view;
         for (Span s : spans) {
             if (s.end > value.length() || s.start >= s.end) continue;

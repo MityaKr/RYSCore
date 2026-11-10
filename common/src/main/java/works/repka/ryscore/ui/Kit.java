@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
 import net.minecraft.client.gui.GuiGraphics;
+import org.jetbrains.annotations.Nullable;
 import works.repka.ryscore.theme.Theme;
 import works.repka.ryscore.ui.Type.Weight;
 
@@ -122,15 +123,79 @@ public final class Kit {
         });
     }
 
-    /** Вкладка раздела в одну строку, кегль 13. Возвращает ширину. */
+    /** Вкладка раздела: подпись, число (меньше нуля, если не нужно), пустое действие делает её неактивной. */
+    public record Tab(String label, int count, boolean active, @Nullable Runnable action) {}
+
+    private static final float TAB_PX = 12f;
+    private static final float TAB_PAD_MIN = 3f, TAB_PAD_MAX = 8f;
+    private static final float TAB_NUMBER_GAP = 3f;
+    private static final int TAB_GAP = 2;
+
+    private static float tabText(Tab tab, boolean numbers) {
+        float w = Draw.labelWidth(tab.label(), TAB_PX, Weight.SEMIBOLD);
+        return numbers && tab.count() >= 0 ? w + TAB_NUMBER_GAP + Draw.labelWidth(Integer.toString(tab.count()), TAB_PX, Weight.REGULAR) : w;
+    }
+
+    private static float tabPad(List<Tab> tabs, boolean numbers, int room) {
+        float text = 0;
+        for (Tab tab : tabs) text += tabText(tab, numbers);
+        return Math.min(TAB_PAD_MAX, (room - text - TAB_GAP * (tabs.size() - 1f)) / (tabs.size() * 2f));
+    }
+
+    /**
+     * Вкладки раздела окна: текст и линия под активной, без заливки, все в одну строку на ширину {@code room}.
+     * Если не помещаются, сначала сужаются отступы, потом убираются числа.
+     */
+    public static void tabs(GuiGraphics g, Theme t, Hits hits, int x, int y, int h, int room, List<Tab> tabs, int mx, int my) {
+        float pad = tabPad(tabs, true, room);
+        boolean numbers = pad >= TAB_PAD_MIN;
+        if (!numbers) pad = Math.max(TAB_PAD_MIN, tabPad(tabs, false, room));
+        int left = x, right = x + room;
+        float cy = y + (h - 1) / 2f;
+        for (Tab tab : tabs) {
+            int w = Math.round(tabText(tab, numbers) + pad * 2);
+            if (left + w > right + 1) return;
+            Runnable action = tab.action();
+            boolean hot = action != null && over(mx, my, left, y, w, h);
+            t.tabLine(g, left, y, w, h, tab.active(), hot);
+            float tx = left + pad;
+            Draw.label(g, tab.label(), tx, cy, TAB_PX, tab.active() ? Weight.SEMIBOLD : Weight.REGULAR, action == null ? t.c("text.dim") : t.tabLineFg(tab.active(), hot));
+            if (numbers && tab.count() >= 0) {
+                float nx = tx + Draw.labelWidth(tab.label(), TAB_PX, Weight.SEMIBOLD) + TAB_NUMBER_GAP;
+                Draw.label(g, Integer.toString(tab.count()), nx, cy, TAB_PX, Weight.REGULAR, t.c("text.dim"));
+            }
+            if (action != null) hits.add(left, y, w, h, b -> action.run());
+            left += w + TAB_GAP;
+        }
+    }
+
+    /** Одна вкладка раздела. Возвращает ширину. */
     public static int sectionTab(GuiGraphics g, Theme t, Hits hits, int x, int y, int h, String label, boolean active, int mx, int my, Runnable action) {
-        Weight weight = active ? Weight.MEDIUM : Weight.REGULAR;
-        int w = (int) Math.ceil(Draw.labelWidth(label, 13, weight)) + 12;
+        int w = (int) Math.ceil(Draw.labelWidth(label, TAB_PX, Weight.SEMIBOLD)) + 12;
         boolean hot = over(mx, my, x, y, w, h);
         t.tabLine(g, x, y, w, h, active, hot);
-        Draw.label(g, label, x + 6, y + (h - 1) / 2f, 13, weight, active || hot ? t.c("text.primary") : t.c("text.muted"));
+        Draw.label(g, label, x + 6, y + (h - 1) / 2f, TAB_PX, active ? Weight.SEMIBOLD : Weight.REGULAR, t.tabLineFg(active, hot));
         hits.add(x, y, w, h, b -> action.run());
         return w;
+    }
+
+    /** Состояние не только цветом: полный круг, половина круга, крест. */
+    public enum State { FULL, PARTIAL, NONE }
+
+    /** Рисует индикатор состояния. Возвращает true под курсором: вызывающий показывает подсказку. */
+    public static boolean indicator(GuiGraphics g, Theme t, float x, float y, float size, State state, int mx, int my) {
+        Icons.Shape shape = switch (state) {
+            case FULL -> Icons.Shape.DOT;
+            case PARTIAL -> Icons.Shape.HALF_DOT;
+            case NONE -> Icons.Shape.CROSS;
+        };
+        int color = t.c(switch (state) {
+            case FULL -> "state.ok";
+            case PARTIAL -> "state.warn";
+            case NONE -> "state.bad";
+        });
+        Icons.draw(g, shape, x, y, size, color);
+        return over(mx, my, (int) Math.floor(x), (int) Math.floor(y), (int) Math.ceil(size) + 1, (int) Math.ceil(size) + 1);
     }
 
     /** Вкладка-фильтр: серая плашка у активной, кегль 12.5. Возвращает ширину. */

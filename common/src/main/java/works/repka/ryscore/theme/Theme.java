@@ -344,7 +344,7 @@ public final class Theme {
     /** Цвет текста на вкладке раздела. */
     public int tabLineFg(boolean active, boolean hovered) {
         if (beveled()) return active ? c("tab.active.fg") : c("tab.inactive.fg");
-        return active || hovered ? c("text.primary") : c("text.muted");
+        return active || hovered ? c("text.primary") : c("text.secondary");
     }
 
     public void chip(GuiGraphics g, int x, int y, int w, int h, String kind) {

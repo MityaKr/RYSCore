@@ -18,7 +18,7 @@ import org.joml.Matrix4f;
 
 /** Значки из макетов: фигура задаётся формулой и рисуется в пикселях экрана, поэтому гладкая на любом масштабе. */
 public final class Icons {
-    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK, PLUS, PIN }
+    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK, PLUS, PIN, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN, GRIP, PENCIL, UNDO, REDO, DOT, HALF_DOT }
 
     private record Key(Shape shape, int pixels) {}
 
@@ -77,6 +77,22 @@ public final class Icons {
     private static boolean inside(Shape shape, double u, double v) {
         return switch (shape) {
             case STAR -> star(u, v);
+            case CHEVRON_RIGHT -> segment(u, v, 0.36, 0.18, 0.68, 0.5) < 0.075 || segment(u, v, 0.68, 0.5, 0.36, 0.82) < 0.075;
+            case CHEVRON_LEFT -> segment(u, v, 0.64, 0.18, 0.32, 0.5) < 0.075 || segment(u, v, 0.32, 0.5, 0.64, 0.82) < 0.075;
+            case CHEVRON_DOWN -> segment(u, v, 0.18, 0.36, 0.5, 0.68) < 0.075 || segment(u, v, 0.5, 0.68, 0.82, 0.36) < 0.075;
+            case GRIP -> {
+                boolean in = false;
+                for (double cx : new double[] {0.36, 0.64}) for (double cy : new double[] {0.22, 0.5, 0.78}) in |= Math.hypot(u - cx, v - cy) < 0.09;
+                yield in;
+            }
+            case PENCIL -> segment(u, v, 0.26, 0.74, 0.74, 0.26) < 0.1 && !(u + v < 0.86 && segment(u, v, 0.26, 0.74, 0.36, 0.64) > 0.06) || segment(u, v, 0.16, 0.84, 0.24, 0.76) < 0.04;
+            case UNDO -> arc(u, v, true);
+            case REDO -> arc(1 - u, v, true);
+            case DOT -> Math.hypot(u - 0.5, v - 0.5) < 0.4;
+            case HALF_DOT -> {
+                double d = Math.hypot(u - 0.5, v - 0.5);
+                yield d < 0.4 && (u >= 0.5 || d > 0.31);
+            }
             case PLUS -> segment(u, v, 0.5, 0.16, 0.5, 0.84) < 0.075 || segment(u, v, 0.16, 0.5, 0.84, 0.5) < 0.075;
             case PIN -> (v > 0.12 && v < 0.2 && u > 0.28 && u < 0.72) || (v >= 0.2 && v < 0.5 && u > 0.37 && u < 0.63)
                 || (v >= 0.5 && v < 0.6 && u > 0.2 && u < 0.8) || segment(u, v, 0.5, 0.6, 0.5, 0.92) < 0.04;
@@ -94,6 +110,13 @@ public final class Icons {
                 yield d > 0.15 && d < (tooth ? 0.43 : 0.32);
             }
         };
+    }
+
+    /** Дуга со стрелкой влево: значок отмены. Зеркальная даёт повтор. */
+    private static boolean arc(double u, double v, boolean head) {
+        double d = Math.hypot(u - 0.5, v - 0.58);
+        boolean ring = d > 0.24 && d < 0.34 && (v < 0.58 || u > 0.5);
+        return ring || segment(u, v, 0.22, 0.34, 0.14, 0.58) < 0.06 || segment(u, v, 0.14, 0.58, 0.4, 0.58) < 0.06;
     }
 
     private static double segment(double u, double v, double x0, double y0, double x1, double y1) {

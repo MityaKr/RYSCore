@@ -13,8 +13,27 @@ import works.repka.ryscore.theme.ThemeManager;
 public final class Draw {
     private Draw() {}
 
+    /** Пикселей экрана в единице: внутри {@link UiScale#render} это масштаб интерфейса. */
+    private static double scaleOverride;
+
     public static double scale() {
-        return Minecraft.getInstance().getWindow().getGuiScale();
+        return scaleOverride > 0 ? scaleOverride : Minecraft.getInstance().getWindow().getGuiScale();
+    }
+
+    static double pushScale(double pixels) {
+        double saved = scaleOverride;
+        scaleOverride = pixels;
+        return saved;
+    }
+
+    static void popScale(double saved) {
+        scaleOverride = saved;
+    }
+
+    /** Область обрезки в единицах холста. Закрывается {@code g.disableScissor()}. */
+    public static void scissor(GuiGraphics g, int minX, int minY, int maxX, int maxY) {
+        if (g instanceof ScaledGraphics scaled) scaled.scissorUi(minX, minY, maxX, maxY);
+        else g.enableScissor(minX, minY, maxX, maxY);
     }
 
     public static int alpha(int argb, float mul) {

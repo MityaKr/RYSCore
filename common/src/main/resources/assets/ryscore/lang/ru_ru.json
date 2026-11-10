@@ -1,3 +1,6 @@
 {
-  "ryscore.loading.progress": "Просмотрено предметов: %s"
+  "ryscore.loading.progress": "Просмотрено предметов: %s",
+  "ryscore.number.kilo": "к",
+  "ryscore.number.mega": "м",
+  "ryscore.number.giga": "г"
 }

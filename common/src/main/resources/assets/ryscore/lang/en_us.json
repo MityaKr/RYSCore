@@ -1,3 +1,6 @@
 {
-  "ryscore.loading.progress": "Items examined: %s"
+  "ryscore.loading.progress": "Items examined: %s",
+  "ryscore.number.kilo": "k",
+  "ryscore.number.mega": "M",
+  "ryscore.number.giga": "G"
 }

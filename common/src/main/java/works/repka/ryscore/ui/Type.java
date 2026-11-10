@@ -35,7 +35,7 @@ import org.lwjgl.system.MemoryUtil;
 public final class Type {
     public enum Weight {
         REGULAR(400), MEDIUM(500), SEMIBOLD(600),
-        /** Заголовки макетов: Space Grotesk 600 для латиницы, для остального Inter 600. */
+        /** Заголовки макетов: Space Grotesk 600 для строк из латиницы, строка с кириллицей целиком идёт Inter 600. */
         DISPLAY(600);
 
         final int value;
@@ -163,7 +163,22 @@ public final class Type {
         }
     }
 
-    public static float width(String text, float designPx, Weight weight) {
+    /** Заголовочный шрифт только для строк, которые он покрывает целиком: иначе вся строка идёт Inter 600. */
+    private static Weight resolved(String text, Weight weight) {
+        if (weight != Weight.DISPLAY) return weight;
+        List<Face> faces = faces(Weight.DISPLAY);
+        if (faces.isEmpty()) return Weight.SEMIBOLD;
+        Face display = faces.get(0);
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            i += Character.charCount(cp);
+            if (STBTruetype.stbtt_FindGlyphIndex(display.info, cp) == 0) return Weight.SEMIBOLD;
+        }
+        return Weight.DISPLAY;
+    }
+
+    public static float width(String text, float designPx, Weight requested) {
+        Weight weight = resolved(text, requested);
         float w = 0;
         for (int i = 0; i < text.length(); ) {
             int cp = text.codePointAt(i);
@@ -174,8 +189,9 @@ public final class Type {
     }
 
     /** @param centerY вертикальная середина строки в единицах GUI */
-    public static void draw(GuiGraphics g, String text, float x, float centerY, float designPx, Weight weight, int argb) {
+    public static void draw(GuiGraphics g, String text, float x, float centerY, float designPx, Weight requested, int argb) {
         if (text.isEmpty() || (argb >>> 24) == 0) return;
+        Weight weight = resolved(text, requested);
         double scale = Draw.scale();
         float size = (float) (em(designPx) * scale);
         int baseline = Math.round((centerY + CENTER_TO_BASELINE * em(designPx)) * (float) scale);
@@ -251,6 +267,15 @@ public final class Type {
             case '↖' -> new Symbol(Icons.Shape.ARROW, 225);
             case '↑' -> new Symbol(Icons.Shape.ARROW, 270);
             case '↗' -> new Symbol(Icons.Shape.ARROW, 315);
+            case '‹' -> new Symbol(Icons.Shape.CHEVRON_LEFT, 0);
+            case '›', '▸', '▶' -> new Symbol(Icons.Shape.CHEVRON_RIGHT, 0);
+            case '▾', '▼' -> new Symbol(Icons.Shape.CHEVRON_DOWN, 0);
+            case '●' -> new Symbol(Icons.Shape.DOT, 0);
+            case '◐' -> new Symbol(Icons.Shape.HALF_DOT, 0);
+            case '✎', '✏' -> new Symbol(Icons.Shape.PENCIL, 0);
+            case '↶' -> new Symbol(Icons.Shape.UNDO, 0);
+            case '↷' -> new Symbol(Icons.Shape.REDO, 0);
+            case '⠿' -> new Symbol(Icons.Shape.GRIP, 0);
             default -> null;
         };
     }
