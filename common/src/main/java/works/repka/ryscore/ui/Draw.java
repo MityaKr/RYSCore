@@ -36,6 +36,16 @@ public final class Draw {
         else g.enableScissor(minX, minY, maxX, maxY);
     }
 
+    /** Рисует чужим кодом: если он забыл закрыть свои {@code pushPose}, матрица окна всё равно вернётся на место. */
+    public static void isolated(GuiGraphics g, Runnable foreign) {
+        com.mojang.blaze3d.vertex.PoseStack.Pose saved = g.pose().last();
+        try {
+            foreign.run();
+        } finally {
+            while (g.pose().last() != saved && !g.pose().clear()) g.pose().popPose();
+        }
+    }
+
     public static int alpha(int argb, float mul) {
         int a = Math.round((argb >>> 24) * Math.max(0f, Math.min(1f, mul)));
         return (a << 24) | (argb & 0xFFFFFF);
