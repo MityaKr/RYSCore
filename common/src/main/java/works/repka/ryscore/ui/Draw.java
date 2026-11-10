@@ -115,7 +115,9 @@ public final class Draw {
     /** Значок «?» размером 10×10: подсказка по синтаксису при наведении. */
     public static void question(GuiGraphics g, int x, int y, int color) {
         roundBorder(g, x, y, 10, 10, 5f, color);
-        textScaled(g, "?", x + 3, y + 2, 0.75f, color);
+        // по центру кружка по ширине самого знака: у шрифта темы и шрифта игры она разная
+        float w = labelWidth("?", 11.5f, Type.Weight.MEDIUM);
+        label(g, "?", x + (10 - w) / 2f, y + 5f, 11.5f, Type.Weight.MEDIUM, color);
     }
 
     /** Значок «i» размером 10×10: рядом с ним живёт подсказка при наведении. */
