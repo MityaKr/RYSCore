@@ -192,7 +192,7 @@ public final class Type {
     public static void draw(GuiGraphics g, String text, float x, float centerY, float designPx, Weight requested, int argb) {
         if (text.isEmpty() || (argb >>> 24) == 0) return;
         Weight weight = resolved(text, requested);
-        double scale = Draw.scale();
+        double scale = Draw.scale(g);
         float size = (float) (em(designPx) * scale);
         int baseline = Math.round((centerY + CENTER_TO_BASELINE * em(designPx)) * (float) scale);
         int sizeKey = Math.round(size * 8);

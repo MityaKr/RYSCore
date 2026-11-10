@@ -25,7 +25,7 @@ public final class Tiles {
     /** Внешний вид ячейки. light и dark заданы только у ванильного бевеля. */
     public record Style(float radius, int fill, int border, int light, int dark, boolean beveled) {}
 
-    private record Key(int pixels, Style style) {}
+    private record Key(int pixels, int scale, Style style) {}
 
     private static final int MAX_CACHED = 32;
     private static final Map<Key, ResourceLocation> CACHE = new HashMap<>();
@@ -36,8 +36,9 @@ public final class Tiles {
     /** @param xy координаты левых верхних углов подряд: x0, y0, x1, y1… в единицах GUI */
     public static void draw(GuiGraphics g, float size, Style style, int[] xy, int count) {
         if (count <= 0) return;
-        int pixels = Math.round(size * (float) Draw.scale());
-        ResourceLocation texture = texture(pixels, style);
+        double scale = Draw.scale(g);
+        int pixels = Math.round(size * (float) scale);
+        ResourceLocation texture = texture(pixels, scale, style);
         g.flush();
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -56,8 +57,8 @@ public final class Tiles {
         RenderSystem.disableBlend();
     }
 
-    private static ResourceLocation texture(int pixels, Style style) {
-        Key key = new Key(pixels, style);
+    private static ResourceLocation texture(int pixels, double scale, Style style) {
+        Key key = new Key(pixels, (int) Math.round(scale * 64), style);
         ResourceLocation known = CACHE.get(key);
         if (known != null) return known;
         TextureManager textures = Minecraft.getInstance().getTextureManager();
@@ -67,15 +68,15 @@ public final class Tiles {
             CACHE.clear();
         }
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath("ryscore", "tile/" + counter++);
-        textures.register(id, new DynamicTexture(paint(pixels, style)));
+        textures.register(id, new DynamicTexture(paint(pixels, scale, style)));
         CACHE.put(key, id);
         return id;
     }
 
-    private static NativeImage paint(int n, Style s) {
+    private static NativeImage paint(int n, double scale, Style s) {
         NativeImage image = new NativeImage(n, n, true);
-        int t = Math.max(1, (int) Math.round(Draw.scale() * (s.beveled ? 1 : 0.5)));
-        float r = Math.min(s.radius * (float) Draw.scale(), n / 2f);
+        int t = Math.max(1, (int) Math.round(scale * (s.beveled ? 1 : 0.5)));
+        float r = Math.min(s.radius * (float) scale, n / 2f);
         for (int y = 0; y < n; y++) {
             for (int x = 0; x < n; x++) {
                 image.setPixelRGBA(x, y, abgr(s.beveled ? bevelPixel(x, y, n, t, s) : roundPixel(x, y, n, r, t, s)));

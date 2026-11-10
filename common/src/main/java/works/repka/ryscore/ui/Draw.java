@@ -20,6 +20,19 @@ public final class Draw {
         return scaleOverride > 0 ? scaleOverride : Minecraft.getInstance().getWindow().getGuiScale();
     }
 
+    /**
+     * Пикселей экрана в единице с учётом масштаба текущей матрицы: карта с зумом, уменьшенный предпросмотр.
+     * Фигуры, текст и значки растрируются под этот размер и остаются чёткими при любом масштабе.
+     */
+    public static double scale(GuiGraphics g) {
+        org.joml.Matrix4f m = g.pose().last().pose();
+        double k = Math.sqrt(m.m00() * (double) m.m00() + m.m01() * (double) m.m01());
+        double plain = scale();
+        if (k < 1e-6) return plain;
+        double s = Minecraft.getInstance().getWindow().getGuiScale() * k;
+        return Math.abs(s - plain) < 1e-4 ? plain : s;
+    }
+
     static double pushScale(double pixels) {
         double saved = scaleOverride;
         scaleOverride = pixels;
@@ -70,12 +83,13 @@ public final class Draw {
             rect(g, Math.round(x), Math.round(y), Math.round(w), Math.round(h), argb);
             return;
         }
-        double s = scale();
+        double s = scale(g);
         int px = (int) Math.round(x * s), py = (int) Math.round(y * s);
         int pw = (int) Math.round((x + w) * s) - px, ph = (int) Math.round((y + h) * s) - py;
         int r = (int) Math.round(radius * s);
+        if (pw <= 0 || ph <= 0) return;
         begin(g, s);
-        g.drawManaged(() -> fillRound(g, px, py, pw, ph, r, argb));
+        Shapes.draw(g, ShapeRaster.round(pw, ph, r), px, py, pw, ph, argb);
         end(g);
     }
 
@@ -86,13 +100,14 @@ public final class Draw {
 
     public static void roundBorder(GuiGraphics g, float x, float y, float w, float h, float radius, int argb, float thickness) {
         if ((argb >>> 24) == 0 || w <= 0 || h <= 0) return;
-        double s = scale();
+        double s = scale(g);
         int px = (int) Math.round(x * s), py = (int) Math.round(y * s);
         int pw = (int) Math.round((x + w) * s) - px, ph = (int) Math.round((y + h) * s) - py;
         int r = (int) Math.round(radius * s);
         int t = Math.max(1, (int) Math.round(thickness * s));
+        if (pw <= 0 || ph <= 0) return;
         begin(g, s);
-        g.drawManaged(() -> ring(g, px, py, pw, ph, r, t, argb));
+        Shapes.draw(g, ShapeRaster.ring(pw, ph, r, t), px, py, pw, ph, argb);
         end(g);
     }
 
@@ -115,19 +130,38 @@ public final class Draw {
         roundBorder(g, x, y, w, h, radius, border);
     }
 
-    /** Мягкая тень под панелью. */
+    /** Мягкая тень под панелью: 28 скруглённых слоёв, собранных в одну заготовку. */
     public static void shadow(GuiGraphics g, float x, float y, float w, float h, float radius, float strength) {
         if (strength <= 0) return;
         // как box-shadow: 0 30px 80px rgba(0,0,0,.55) в макете, при strength 1
         int layers = 28;
         float spread = 20f * strength, offset = 15f * strength;
+        int layerAlpha = alpha(0xFF000000, 0.55f * Math.min(1f, strength + 0.15f) / layers) >>> 24;
+        if (layerAlpha == 0) return;
+        double s = scale(g);
+        int[] boxes = new int[layers * 5];
+        int n = 0;
         for (int i = 0; i < layers; i++) {
             float t = (i + 0.5f) / layers;
             float e = (t * 2f - 1f) * spread;
             float r = Math.max(0.5f, radius + e);
             if (w + e * 2 <= 0 || h + e * 2 <= 0) continue;
-            round(g, x - e, y - e + offset, w + e * 2, h + e * 2, r, alpha(0xFF000000, 0.55f * Math.min(1f, strength + 0.15f) / layers));
+            float bx = x - e, by = y - e + offset, bw = w + e * 2, bh = h + e * 2;
+            int px = (int) Math.round(bx * s), py = (int) Math.round(by * s);
+            int pw = (int) Math.round((bx + bw) * s) - px, ph = (int) Math.round((by + bh) * s) - py;
+            if (pw <= 0 || ph <= 0) continue;
+            boxes[n++] = px;
+            boxes[n++] = py;
+            boxes[n++] = pw;
+            boxes[n++] = ph;
+            boxes[n++] = (int) Math.round(r * s);
         }
+        if (n == 0) return;
+        int[] area = new int[4];
+        ShapeRaster.Plan plan = ShapeRaster.layered(java.util.Arrays.copyOf(boxes, n), layerAlpha, area);
+        begin(g, s);
+        Shapes.draw(g, plan, area[0], area[1], area[2], area[3], 0xFF000000);
+        end(g);
     }
 
     /** Ванильный бевель: светлая кромка сверху-слева, тёмная снизу-справа. Для слотов передаётся inset = true. */
@@ -363,67 +397,5 @@ public final class Draw {
 
     private static void end(GuiGraphics g) {
         g.pose().popPose();
-    }
-
-    private static double exactInset(int r, int row) {
-        double dy = r - row - 0.5;
-        return r - Math.sqrt(r * (double) r - dy * dy);
-    }
-
-    private static void fillRound(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
-        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-        g.fill(x, y + r, x + w, y + h - r, color);
-        int a = color >>> 24;
-        for (int i = 0; i < r; i++) {
-            double exact = exactInset(r, i);
-            int dx = (int) Math.ceil(exact);
-            g.fill(x + dx, y + i, x + w - dx, y + i + 1, color);
-            g.fill(x + dx, y + h - 1 - i, x + w - dx, y + h - i, color);
-            int aa = (int) (a * (dx - exact));
-            if (aa > 6 && dx > 0) {
-                int c2 = (aa << 24) | (color & 0xFFFFFF);
-                g.fill(x + dx - 1, y + i, x + dx, y + i + 1, c2);
-                g.fill(x + w - dx, y + i, x + w - dx + 1, y + i + 1, c2);
-                g.fill(x + dx - 1, y + h - 1 - i, x + dx, y + h - i, c2);
-                g.fill(x + w - dx, y + h - 1 - i, x + w - dx + 1, y + h - i, c2);
-            }
-        }
-    }
-
-    private static void ring(GuiGraphics g, int x, int y, int w, int h, int r, int t, int color) {
-        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-        if (t * 2 >= Math.min(w, h)) {
-            fillRound(g, x, y, w, h, r, color);
-            return;
-        }
-        int corner = Math.max(r, t);
-        // прямые участки боковых сторон
-        g.fill(x, y + corner, x + t, y + h - corner, color);
-        g.fill(x + w - t, y + corner, x + w, y + h - corner, color);
-        int ri = Math.max(0, r - t);
-        int a = color >>> 24;
-        for (int i = 0; i < corner; i++) {
-            double exact = i < r ? exactInset(r, i) : 0;
-            int outer = (int) Math.ceil(exact);
-            int innerRow = i - t;
-            int inner;
-            if (innerRow < 0) inner = -1;
-            else inner = t + (innerRow < ri ? (int) Math.ceil(exactInset(ri, innerRow)) : 0);
-            for (int pass = 0; pass < 2; pass++) {
-                int yy = pass == 0 ? y + i : y + h - 1 - i;
-                if (inner < 0) {
-                    g.fill(x + outer, yy, x + w - outer, yy + 1, color);
-                } else {
-                    g.fill(x + outer, yy, x + inner, yy + 1, color);
-                    g.fill(x + w - inner, yy, x + w - outer, yy + 1, color);
-                }
-                int aa = (int) (a * (outer - exact));
-                if (aa > 6 && outer > 0) {
-                    int c2 = (aa << 24) | (color & 0xFFFFFF);
-                    g.fill(x + outer - 1, yy, x + outer, yy + 1, c2);
-                    g.fill(x + w - outer, yy, x + w - outer + 1, yy + 1, c2);
-                }
-            }
-        }
     }
 }

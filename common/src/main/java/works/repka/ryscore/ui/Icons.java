@@ -28,7 +28,7 @@ public final class Icons {
     private Icons() {}
 
     public static void draw(GuiGraphics g, Shape shape, float x, float y, float size, int argb) {
-        int pixels = Math.max(1, Math.round(size * (float) Draw.scale()));
+        int pixels = Math.max(1, Math.round(size * (float) Draw.scale(g)));
         ResourceLocation texture = CACHE.computeIfAbsent(new Key(shape, pixels), Icons::paint);
         g.flush();
         RenderSystem.setShaderTexture(0, texture);
