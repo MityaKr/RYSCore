@@ -34,13 +34,18 @@ public final class SceneView implements AutoCloseable {
     private static final class Slot {
         @Nullable
         CompletableFuture<SceneMesh.Compiled> pending;
+        /** Для какой сцены строится {@link #pending}: сцена могла смениться, пока шла сборка. */
+        @Nullable
+        BlockScene pendingFor;
         @Nullable
         SceneMesh mesh;
+        /** Сетка от прежней сцены: рисуется, пока новая не готова, чтобы смена шла без мигания. */
+        boolean stale;
         boolean failed;
         float sortedYaw, sortedPitch;
     }
 
-    private final BlockScene scene;
+    private BlockScene scene;
     private final Map<Integer, Slot> slots = new HashMap<>();
     private float pitch = START_PITCH, yaw = START_YAW, zoom = 1f;
     @Nullable
@@ -50,6 +55,19 @@ public final class SceneView implements AutoCloseable {
 
     public SceneView(BlockScene scene) {
         this.scene = scene;
+    }
+
+    /**
+     * Сменить сцену того же размера (например, следующий вариант блоков структуры). Камера и слой сохраняются,
+     * старая картинка показывается, пока новая строится в фоне.
+     */
+    public void setScene(BlockScene next) {
+        if (next == scene) return;
+        scene = next;
+        for (Slot slot : slots.values()) {
+            slot.stale = true;
+            slot.failed = false;
+        }
     }
 
     /** Поворот мышью; единицы те же, что у координат окна. */
@@ -100,21 +118,34 @@ public final class SceneView implements AutoCloseable {
     private Slot slot() {
         Integer key = layer;
         Slot slot = slots.computeIfAbsent(key, k -> new Slot());
-        if (slot.mesh == null && slot.pending == null && !slot.failed) {
+        if ((slot.mesh == null || slot.stale) && slot.pending == null && !slot.failed) {
             VertexSorting sorting = sorting(yaw, pitch);
+            BlockScene building = scene;
             slot.sortedYaw = yaw;
             slot.sortedPitch = pitch;
-            slot.pending = CompletableFuture.supplyAsync(() -> SceneMesh.compile(scene, key, sorting), Util.backgroundExecutor());
+            slot.pendingFor = building;
+            slot.stale = false;
+            slot.pending = CompletableFuture.supplyAsync(() -> SceneMesh.compile(building, key, sorting), Util.backgroundExecutor());
         }
         return slot;
     }
 
-    private static void poll(Slot slot) {
+    private void poll(Slot slot) {
         if (slot.pending == null || !slot.pending.isDone()) return;
         CompletableFuture<SceneMesh.Compiled> done = slot.pending;
+        boolean current = slot.pendingFor == scene;
         slot.pending = null;
+        slot.pendingFor = null;
         try {
-            slot.mesh = new SceneMesh(done.join());
+            SceneMesh.Compiled compiled = done.join();
+            if (!current) {
+                // сцена сменилась, пока шла сборка: эта сетка уже не нужна, соберётся следующая
+                compiled.release();
+                slot.stale = true;
+                return;
+            }
+            if (slot.mesh != null) slot.mesh.close();
+            slot.mesh = new SceneMesh(compiled);
         } catch (RuntimeException e) {
             slot.failed = true;
             RYSCore.LOG.warn("Сцена не построена: {}", e.toString());
