@@ -53,7 +53,52 @@ public final class Type {
     /** Браузер рисует светлый текст плотнее линейной маски: подобрано по снимкам макетов. */
     private static final double GAMMA = 0.82;
 
-    private record Face(STBTTFontinfo info) {}
+    /** Лицо шрифта с кешами: метрики не меняются, а вызов в нативный шрифт дорог при тысячах символов за кадр. */
+    private static final class Face {
+        /** Кодпоинты ниже этого храним в массивах: латиница, кириллица и знаки. */
+        static final int LOW = 0x500;
+        final STBTTFontinfo info;
+        /** Пикселей на единицу шрифта при кегле 1: масштаб линеен по кеглю. */
+        final float unitScale;
+        /** 0 — не проверено, 1 — глиф есть, 2 — нет. */
+        final byte[] hasLow = new byte[LOW];
+        /** Ширина в единицах шрифта; -1 — не измерено. */
+        final int[] advanceLow = new int[LOW];
+        final Map<Integer, Boolean> hasHigh = new java.util.concurrent.ConcurrentHashMap<>();
+        final Map<Integer, Integer> advanceHigh = new java.util.concurrent.ConcurrentHashMap<>();
+
+        Face(STBTTFontinfo info) {
+            this.info = info;
+            this.unitScale = STBTruetype.stbtt_ScaleForMappingEmToPixels(info, 1f);
+            java.util.Arrays.fill(advanceLow, -1);
+        }
+
+        boolean has(int cp) {
+            if (cp >= 0 && cp < LOW) {
+                byte known = hasLow[cp];
+                if (known == 0) hasLow[cp] = known = STBTruetype.stbtt_FindGlyphIndex(info, cp) != 0 ? (byte) 1 : (byte) 2;
+                return known == 1;
+            }
+            return hasHigh.computeIfAbsent(cp, c -> STBTruetype.stbtt_FindGlyphIndex(info, c) != 0);
+        }
+
+        int advanceUnits(int cp) {
+            if (cp >= 0 && cp < LOW) {
+                int known = advanceLow[cp];
+                if (known < 0) advanceLow[cp] = known = measure(cp);
+                return known;
+            }
+            return advanceHigh.computeIfAbsent(cp, this::measure);
+        }
+
+        private int measure(int cp) {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                IntBuffer adv = stack.mallocInt(1), lsb = stack.mallocInt(1);
+                STBTruetype.stbtt_GetCodepointHMetrics(info, cp, adv, lsb);
+                return adv.get(0);
+            }
+        }
+    }
 
     private record Glyph(int page, float u0, float v0, float u1, float v1, int w, int h, int xoff, int yoff) {}
 
@@ -138,7 +183,7 @@ public final class Type {
     }
 
     private static Face faceOf(Weight weight, int codepoint) {
-        for (Face f : faces(weight)) if (STBTruetype.stbtt_FindGlyphIndex(f.info, codepoint) != 0) return f;
+        for (Face f : faces(weight)) if (f.has(codepoint)) return f;
         return null;
     }
 
@@ -156,15 +201,14 @@ public final class Type {
         Face face = faceOf(weight, codepoint);
         if (face == null && symbol(codepoint) != null) return em(designPx);
         if (face == null) return Minecraft.getInstance().font.width(Character.toString(codepoint)) * em(designPx) / 8f;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer adv = stack.mallocInt(1), lsb = stack.mallocInt(1);
-            STBTruetype.stbtt_GetCodepointHMetrics(face.info, codepoint, adv, lsb);
-            return adv.get(0) * STBTruetype.stbtt_ScaleForMappingEmToPixels(face.info, em(designPx));
-        }
+        return face.advanceUnits(codepoint) * face.unitScale * em(designPx);
     }
 
-    /** Заголовочный шрифт только для строк, которые он покрывает целиком: иначе вся строка идёт Inter 600. */
-    private static Weight resolved(String text, Weight weight) {
+    /**
+     * Каким начертанием на деле пойдёт строка: заголовочный шрифт только для строк, которые он покрывает целиком,
+     * иначе вся строка идёт Inter 600. Нужен тем, кто меряет строку по символам.
+     */
+    public static Weight resolved(String text, Weight weight) {
         if (weight != Weight.DISPLAY) return weight;
         List<Face> faces = faces(Weight.DISPLAY);
         if (faces.isEmpty()) return Weight.SEMIBOLD;
@@ -172,24 +216,39 @@ public final class Type {
         for (int i = 0; i < text.length(); ) {
             int cp = text.codePointAt(i);
             i += Character.charCount(cp);
-            if (STBTruetype.stbtt_FindGlyphIndex(display.info, cp) == 0) return Weight.SEMIBOLD;
+            if (!display.has(cp)) return Weight.SEMIBOLD;
         }
         return Weight.DISPLAY;
     }
 
     public static float width(String text, float designPx, Weight requested) {
+        return width(text, designPx, requested, 0f);
+    }
+
+    /** @param tracking межбуквенный интервал в единицах GUI, между символами (после последнего не добавляется) */
+    public static float width(String text, float designPx, Weight requested, float tracking) {
         Weight weight = resolved(text, requested);
         float w = 0;
+        int count = 0;
         for (int i = 0; i < text.length(); ) {
             int cp = text.codePointAt(i);
             i += Character.charCount(cp);
             w += advance(cp, designPx, weight);
+            count++;
         }
-        return w;
+        return count > 1 ? w + tracking * (count - 1) : w;
     }
 
     /** @param centerY вертикальная середина строки в единицах GUI */
     public static void draw(GuiGraphics g, String text, float x, float centerY, float designPx, Weight requested, int argb) {
+        draw(g, text, x, centerY, designPx, requested, argb, 0f);
+    }
+
+    /**
+     * @param centerY вертикальная середина строки в единицах GUI
+     * @param tracking межбуквенный интервал в единицах GUI (подписи капсом); вся строка остаётся одним вызовом
+     */
+    public static void draw(GuiGraphics g, String text, float x, float centerY, float designPx, Weight requested, int argb, float tracking) {
         if (text.isEmpty() || (argb >>> 24) == 0) return;
         Weight weight = resolved(text, requested);
         double scale = Draw.scale(g);
@@ -210,17 +269,17 @@ public final class Type {
                 final String s = Character.toString(cp);
                 if (fallback == null) fallback = new ArrayList<>();
                 fallback.add(() -> drawMissing(g, s, at, centerY, designPx, argb));
-                pen += (float) (advance(cp, designPx, weight) * scale);
+                pen += (float) ((advance(cp, designPx, weight) + tracking) * scale);
                 continue;
             }
             int whole = (int) Math.floor(pen);
             int sub = Math.min(SUBPIXELS - 1, (int) ((pen - whole) * SUBPIXELS));
             Glyph glyph = glyph(face, weight, cp, sizeKey, size, sub);
             if (glyph != null) quads.add(new Quad(glyph, whole, baseline));
-            pen += (float) (advance(cp, designPx, weight) * scale);
+            pen += (float) ((advance(cp, designPx, weight) + tracking) * scale);
         }
         if (generation != started) {
-            draw(g, text, x, centerY, designPx, weight, argb);
+            draw(g, text, x, centerY, designPx, weight, argb, tracking);
             return;
         }
         g.flush();

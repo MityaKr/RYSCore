@@ -223,6 +223,29 @@ public final class Draw {
         g.pose().popPose();
     }
 
+    /** Текст по макету с межбуквенным интервалом в единицах GUI (подписи капсом): одна строка — один вызов. */
+    public static void label(GuiGraphics g, String s, float x, float centerY, float designPx, Type.Weight weight, int argb, float tracking) {
+        if (useType()) {
+            Type.draw(g, s, x, centerY, designPx, weight, argb, tracking);
+            return;
+        }
+        float pen = x;
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            i += Character.charCount(cp);
+            String ch = Character.toString(cp);
+            label(g, ch, pen, centerY, designPx, weight, argb);
+            pen += labelWidth(ch, designPx, weight) + tracking;
+        }
+    }
+
+    /** Ширина текста по макету с межбуквенным интервалом. */
+    public static float labelWidth(String s, float designPx, Type.Weight weight, float tracking) {
+        if (useType()) return Type.width(s, designPx, weight, tracking);
+        int n = s.codePointCount(0, s.length());
+        return labelWidth(s, designPx, weight) + (n > 1 ? tracking * (n - 1) : 0);
+    }
+
     /** Ширина в единицах GUI текста по макету. */
     public static float labelWidth(String s, float designPx, Type.Weight weight) {
         if (useType()) return Type.width(s, designPx, weight);
@@ -245,21 +268,35 @@ public final class Draw {
         return Minecraft.getInstance().font.width(s) * scale;
     }
 
-    /** Перенос текста по словам под ширину в единицах GUI. */
+    /** Перенос текста по словам под ширину в единицах GUI. Ширина строки копится по словам, без перемера. */
     public static java.util.List<String> wrap(String text, int maxWidth) {
         java.util.List<String> lines = new java.util.ArrayList<>();
         StringBuilder line = new StringBuilder();
+        float lineW = 0, space = rawWidth(" ");
         for (String word : text.split(" ")) {
-            String next = line.length() == 0 ? word : line + " " + word;
-            if (line.length() > 0 && width(next) > maxWidth) {
+            float wordW = rawWidth(word);
+            if (line.length() > 0 && Math.ceil(lineW + space + wordW) > maxWidth) {
                 lines.add(line.toString());
-                line = new StringBuilder(word);
+                line.setLength(0);
+                line.append(word);
+                lineW = wordW;
             } else {
-                line = new StringBuilder(next);
+                if (line.length() > 0) {
+                    line.append(' ');
+                    lineW += space;
+                }
+                line.append(word);
+                lineW += wordW;
             }
         }
         if (line.length() > 0) lines.add(line.toString());
         return lines;
+    }
+
+    /** Ширина обычного текста без округления: суммы по словам совпадают с шириной всей строки. */
+    private static float rawWidth(String s) {
+        if (useType()) return Type.width(s, DEFAULT_PX, Type.Weight.REGULAR);
+        return Minecraft.getInstance().font.width(s);
     }
 
     /** Текст, уменьшенный в scale раз (для подписей и бейджей). */
@@ -282,14 +319,23 @@ public final class Draw {
         return font.plainSubstrByWidth(s, Math.max(0, maxWidth - font.width("…"))) + "…";
     }
 
-    /** Перенос текста по макету: не больше {@code maxLines} строк, остаток обрезается многоточием. */
+    /**
+     * Перенос текста по макету: не больше {@code maxLines} строк, остаток обрезается многоточием.
+     * Ширина строки копится по словам; заголовочное начертание зависит от всей строки, поэтому его строки меряются целиком.
+     */
     public static java.util.List<String> wrapLabel(String text, float maxWidth, float designPx, Type.Weight weight, int maxLines) {
         java.util.List<String> lines = new java.util.ArrayList<>();
         String[] words = text.split(" ");
         StringBuilder line = new StringBuilder();
+        boolean additive = weight != Type.Weight.DISPLAY;
+        float lineW = 0, space = additive ? labelWidth(" ", designPx, weight) : 0;
         for (int i = 0; i < words.length; i++) {
-            String next = line.length() == 0 ? words[i] : line + " " + words[i];
-            if (line.length() > 0 && labelWidth(next, designPx, weight) > maxWidth) {
+            float wordW = additive ? labelWidth(words[i], designPx, weight) : 0;
+            boolean overflow;
+            if (line.length() == 0) overflow = false;
+            else if (additive) overflow = lineW + space + wordW > maxWidth;
+            else overflow = labelWidth(line + " " + words[i], designPx, weight) > maxWidth;
+            if (overflow) {
                 if (lines.size() == maxLines - 1) {
                     StringBuilder rest = new StringBuilder(line);
                     for (int k = i; k < words.length; k++) rest.append(' ').append(words[k]);
@@ -297,9 +343,16 @@ public final class Draw {
                     return lines;
                 }
                 lines.add(line.toString());
-                line = new StringBuilder(words[i]);
+                line.setLength(0);
+                line.append(words[i]);
+                lineW = wordW;
             } else {
-                line = new StringBuilder(next);
+                if (line.length() > 0) {
+                    line.append(' ');
+                    lineW += space;
+                }
+                line.append(words[i]);
+                lineW += wordW;
             }
         }
         if (line.length() > 0) lines.add(ellipsize(line.toString(), maxWidth, designPx, weight));
@@ -309,12 +362,19 @@ public final class Draw {
     /** Обрезка под ширину текста по макету. */
     public static String ellipsize(String s, float maxWidth, float designPx, Type.Weight weight) {
         if (labelWidth(s, designPx, weight) <= maxWidth) return s;
-        float room = maxWidth - labelWidth("…", designPx, weight);
+        if (!useType()) {
+            Font font = Minecraft.getInstance().font;
+            float k = designPx / 16f;
+            return font.plainSubstrByWidth(s, Math.max(0, (int) ((maxWidth - labelWidth("…", designPx, weight)) / k))) + "…";
+        }
+        // обрезанная строка рисуется тем же начертанием, что и многоточие с ней: меряем одним начертанием, по символу
+        Type.Weight resolved = Type.resolved(s + "…", weight);
+        float room = maxWidth - Type.advance('…', designPx, resolved);
         int end = 0;
         float w = 0;
         while (end < s.length()) {
             int cp = s.codePointAt(end);
-            float a = labelWidth(Character.toString(cp), designPx, weight);
+            float a = Type.advance(cp, designPx, resolved);
             if (w + a > room) break;
             w += a;
             end += Character.charCount(cp);
