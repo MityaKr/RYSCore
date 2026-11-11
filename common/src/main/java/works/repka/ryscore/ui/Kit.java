@@ -180,7 +180,8 @@ public final class Kit {
     }
 
     /** Состояние не только цветом: полный круг, половина круга, крест. */
-    public enum State { FULL, PARTIAL, NONE }
+    /** ORDER: своего нет, но недостающее можно заказать (автокрафт сети AE2). */
+    public enum State { FULL, PARTIAL, NONE, ORDER }
 
     /** Рисует индикатор состояния. Возвращает true под курсором: вызывающий показывает подсказку. */
     public static boolean indicator(GuiGraphics g, Theme t, float x, float y, float size, State state, int mx, int my) {
@@ -188,11 +189,13 @@ public final class Kit {
             case FULL -> Icons.Shape.DOT;
             case PARTIAL -> Icons.Shape.HALF_DOT;
             case NONE -> Icons.Shape.CROSS;
+            case ORDER -> Icons.Shape.GEAR;
         };
         int color = t.c(switch (state) {
             case FULL -> "state.ok";
             case PARTIAL -> "state.warn";
             case NONE -> "state.bad";
+            case ORDER -> "state.order";
         });
         Icons.draw(g, shape, x, y, size, color);
         return over(mx, my, (int) Math.floor(x), (int) Math.floor(y), (int) Math.ceil(size) + 1, (int) Math.ceil(size) + 1);

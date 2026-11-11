@@ -24,6 +24,7 @@
     "state.ok": "#2e7d32",
     "state.warn": "#e4b23c",
     "state.bad": "#b23b3b",
+    "state.order": "#3f76e4",
     "tab.inactive.bg": "#8b8b8b",
     "tab.inactive.fg": "#e6e6e6",
     "hud.bg": "#101010",

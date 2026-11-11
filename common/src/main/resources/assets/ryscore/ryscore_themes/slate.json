@@ -51,6 +51,7 @@
     "state.ok": "#6fcf8f",
     "state.warn": "#e4b23c",
     "state.bad": "#e36b6b",
+    "state.order": "#6aa8ff",
     "chip.mod.bg": "#1f2a44",
     "chip.mod.fg": "#8fb4ff",
     "chip.fn.bg": "#2a1f44",
