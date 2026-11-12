@@ -6,7 +6,8 @@
   "client": [
     "GuiGraphicsBatchMixin",
     "BufferSourceAccessor",
-    "GlStateManagerScissorMixin"
+    "GlStateManagerScissorMixin",
+    "GlStateManagerBlendMixin"
   ],
   "injectors": {
     "defaultRequire": 0

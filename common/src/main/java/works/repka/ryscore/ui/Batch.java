@@ -1,5 +1,6 @@
 package works.repka.ryscore.ui;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -8,7 +9,6 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -113,8 +113,14 @@ public final class Batch {
         for (int i = 0; i < count * 4; i++) {
             buffer.addVertex(XYZ[i * 3], XYZ[i * 3 + 1], XYZ[i * 3 + 2]).setUv(UV[i * 2], UV[i * 2 + 1]).setColor(COLOR[i]);
         }
-        // те же смешивание и глубина, что у обычной заливки GUI
-        RenderType.gui().setupRenderState();
+        // те же смешивание и глубина, что у обычной заливки GUI; после себя возвращаем то, что выставил вызывающий код:
+        // пачка часто рисуется в чужой момент, например между его enableBlend и blit
+        int[] saved0 = GlState.save();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(515);
         ShaderInstance own = shader;
         RenderSystem.setShader(own != null ? () -> own : GameRenderer::getPositionTexColorShader);
         RenderSystem.setShaderTexture(0, Atlas.id(page));
@@ -122,7 +128,14 @@ public final class Batch {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         BufferUploader.drawWithShader(buffer.buildOrThrow());
         RenderSystem.setShaderColor(saved[0], saved[1], saved[2], saved[3]);
-        RenderType.gui().clearRenderState();
+        if (saved0 != null) {
+            GlState.restore(saved0);
+        } else {
+            // перехват состояния не сработал: ведём себя как обычная заливка GUI
+            RenderSystem.disableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableDepthTest();
+        }
         drawCalls++;
     }
 }

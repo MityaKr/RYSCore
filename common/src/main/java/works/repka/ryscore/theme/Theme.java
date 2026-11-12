@@ -159,15 +159,17 @@ public final class Theme {
     public int c(String key) {
         Integer cached = resolved.get(key);
         if (cached != null) return cached;
-        String k = key;
+        String k = key, last = key;
         Integer v = null;
         for (int depth = 0; depth < 6 && k != null; depth++) {
             v = colors.get(k);
             if (v != null) break;
+            last = k;
             k = FALLBACK.get(k);
         }
         if (v == null) {
-            v = switch (key) {
+            // встроенное значение по последнему ключу цепочки: slot.dim без overlay в теме берёт цвет overlay
+            v = switch (last) {
                 case "plate.bg" -> 0xFFC6C6C6;
                 case "plate.border" -> 0xFF8B8B8B;
                 case "panel.border", "card.border", "input.border", "button.border" -> 0;
