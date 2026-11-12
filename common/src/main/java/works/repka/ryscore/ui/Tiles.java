@@ -1,20 +1,9 @@
 package works.repka.ryscore.ui;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
 /**
@@ -27,9 +16,8 @@ public final class Tiles {
 
     private record Key(int pixels, int scale, Style style) {}
 
-    private static final int MAX_CACHED = 32;
-    private static final Map<Key, ResourceLocation> CACHE = new HashMap<>();
-    private static int counter;
+    private static final Map<Key, Atlas.Region> CACHE = new HashMap<>();
+    private static int cacheGeneration = -1;
 
     private Tiles() {}
 
@@ -38,51 +26,44 @@ public final class Tiles {
         if (count <= 0) return;
         double scale = Draw.scale(g);
         int pixels = Math.round(size * (float) scale);
-        ResourceLocation texture = texture(pixels, scale, style);
-        g.flush();
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        Atlas.Region r = region(pixels, scale, style);
+        if (r == null) return;
         Matrix4f matrix = g.pose().last().pose();
-        BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        float u0 = r.u(0), v0 = r.v(0), u1 = r.u(pixels), v1 = r.v(pixels);
         for (int i = 0; i < count; i++) {
             float x = xy[i * 2], y = xy[i * 2 + 1];
-            buffer.addVertex(matrix, x, y, 0).setUv(0, 0);
-            buffer.addVertex(matrix, x, y + size, 0).setUv(0, 1);
-            buffer.addVertex(matrix, x + size, y + size, 0).setUv(1, 1);
-            buffer.addVertex(matrix, x + size, y, 0).setUv(1, 0);
+            Batch.quad(g, matrix, x, y, x + size, y + size, u0, v0, u1, v1, 0xFFFFFFFF, r.page());
         }
-        BufferUploader.drawWithShader(buffer.buildOrThrow());
-        RenderSystem.disableBlend();
     }
 
-    private static ResourceLocation texture(int pixels, double scale, Style style) {
-        Key key = new Key(pixels, (int) Math.round(scale * 64), style);
-        ResourceLocation known = CACHE.get(key);
-        if (known != null) return known;
-        TextureManager textures = Minecraft.getInstance().getTextureManager();
-        if (CACHE.size() >= MAX_CACHED) {
-            // размер окна и тема меняются редко: проще забыть всё и нарисовать заново
-            CACHE.values().forEach(textures::release);
+    private static Atlas.Region region(int pixels, double scale, Style style) {
+        if (!Atlas.fits(pixels, pixels)) return null;
+        if (cacheGeneration != Atlas.generation) {
             CACHE.clear();
+            cacheGeneration = Atlas.generation;
         }
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("ryscore", "tile/" + counter++);
-        textures.register(id, new DynamicTexture(paint(pixels, scale, style)));
-        CACHE.put(key, id);
-        return id;
+        Key key = new Key(pixels, (int) Math.round(scale * 64), style);
+        Atlas.Region known = CACHE.get(key);
+        if (known != null) return known;
+        Atlas.Region r = Atlas.place(pixels, pixels);
+        if (cacheGeneration != Atlas.generation) {
+            CACHE.clear();
+            cacheGeneration = Atlas.generation;
+        }
+        paint(Atlas.pixels(r), r.x(), r.y(), pixels, scale, style);
+        Atlas.mark(r);
+        CACHE.put(key, r);
+        return r;
     }
 
-    private static NativeImage paint(int n, double scale, Style s) {
-        NativeImage image = new NativeImage(n, n, true);
+    private static void paint(NativeImage image, int ox, int oy, int n, double scale, Style s) {
         int t = Math.max(1, (int) Math.round(scale * (s.beveled ? 1 : 0.5)));
         float r = Math.min(s.radius * (float) scale, n / 2f);
         for (int y = 0; y < n; y++) {
             for (int x = 0; x < n; x++) {
-                image.setPixelRGBA(x, y, abgr(s.beveled ? bevelPixel(x, y, n, t, s) : roundPixel(x, y, n, r, t, s)));
+                image.setPixelRGBA(ox + x, oy + y, abgr(s.beveled ? bevelPixel(x, y, n, t, s) : roundPixel(x, y, n, r, t, s)));
             }
         }
-        return image;
     }
 
     private static int bevelPixel(int x, int y, int n, int t, Style s) {

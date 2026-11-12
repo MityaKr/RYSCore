@@ -51,6 +51,8 @@ public final class Draw {
 
     /** Рисует чужим кодом: если он забыл закрыть свои {@code pushPose}, матрица окна всё равно вернётся на место. */
     public static void isolated(GuiGraphics g, Runnable foreign) {
+        // чужой код может рисовать мимо GuiGraphics: наше накопленное должно лечь раньше
+        Batch.flush();
         com.mojang.blaze3d.vertex.PoseStack.Pose saved = g.pose().last();
         try {
             foreign.run();
@@ -73,7 +75,14 @@ public final class Draw {
 
     public static void rect(GuiGraphics g, int x, int y, int w, int h, int argb) {
         if ((argb >>> 24) == 0 || w <= 0 || h <= 0) return;
-        g.fill(x, y, x + w, y + h, argb);
+        if (!Batch.active()) {
+            g.fill(x, y, x + w, y + h, argb);
+            return;
+        }
+        // заливка идёт той же пачкой, что фигуры и текст: белый участок атласа, выборка из центра
+        Atlas.Region white = Atlas.white();
+        float u = white.u(1.5f), v = white.v(1.5f);
+        Batch.quad(g, g.pose().last().pose(), x, y, x + w, y + h, u, v, u, v, argb, white.page());
     }
 
     /** Скруглённый прямоугольник. Координаты и радиус в единицах GUI. */

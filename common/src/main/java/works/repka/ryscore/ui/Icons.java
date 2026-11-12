@@ -1,20 +1,9 @@
 package works.repka.ryscore.ui;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
-import org.joml.Matrix4f;
 
 /** Значки из макетов: фигура задаётся формулой и рисуется в пикселях экрана, поэтому гладкая на любом масштабе. */
 public final class Icons {
@@ -22,27 +11,32 @@ public final class Icons {
 
     private record Key(Shape shape, int pixels) {}
 
-    private static final Map<Key, ResourceLocation> CACHE = new HashMap<>();
+    private static final Map<Key, Atlas.Region> CACHE = new HashMap<>();
+    private static int cacheGeneration = -1;
     private static final int SUPERSAMPLE = 4;
+    /** Порог прозрачности прежнего шейдера position_tex_color: края значков остаются такими же. */
+    private static final int ALPHA_CUTOFF = 26;
 
     private Icons() {}
 
     public static void draw(GuiGraphics g, Shape shape, float x, float y, float size, int argb) {
         int pixels = Math.max(1, Math.round(size * (float) Draw.scale(g)));
-        ResourceLocation texture = CACHE.computeIfAbsent(new Key(shape, pixels), Icons::paint);
-        g.flush();
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        Matrix4f m = g.pose().last().pose();
-        BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        b.addVertex(m, x, y, 0).setUv(0, 0).setColor(argb);
-        b.addVertex(m, x, y + size, 0).setUv(0, 1).setColor(argb);
-        b.addVertex(m, x + size, y + size, 0).setUv(1, 1).setColor(argb);
-        b.addVertex(m, x + size, y, 0).setUv(1, 0).setColor(argb);
-        BufferUploader.drawWithShader(b.buildOrThrow());
-        RenderSystem.disableBlend();
+        if (!Atlas.fits(pixels, pixels)) return;
+        if (cacheGeneration != Atlas.generation) {
+            CACHE.clear();
+            cacheGeneration = Atlas.generation;
+        }
+        Key key = new Key(shape, pixels);
+        Atlas.Region r = CACHE.get(key);
+        if (r == null) {
+            r = paint(key);
+            if (cacheGeneration != Atlas.generation) {
+                CACHE.clear();
+                cacheGeneration = Atlas.generation;
+            }
+            CACHE.put(key, r);
+        }
+        Batch.quad(g, g.pose().last().pose(), x, y, x + size, y + size, r.u(0), r.v(0), r.u(pixels), r.v(pixels), argb, r.page());
     }
 
     /** Значок, повёрнутый вокруг центра на {@code degrees}: стрелка направления. */
@@ -54,9 +48,10 @@ public final class Icons {
         g.pose().popPose();
     }
 
-    private static ResourceLocation paint(Key key) {
+    private static Atlas.Region paint(Key key) {
         int n = key.pixels;
-        NativeImage image = new NativeImage(n, n, true);
+        Atlas.Region r = Atlas.place(n, n);
+        NativeImage image = Atlas.pixels(r);
         for (int y = 0; y < n; y++) {
             for (int x = 0; x < n; x++) {
                 int hits = 0;
@@ -66,12 +61,13 @@ public final class Icons {
                         if (inside(key.shape, u, v)) hits++;
                     }
                 }
-                image.setPixelRGBA(x, y, (hits * 255 / (SUPERSAMPLE * SUPERSAMPLE)) << 24 | 0xFFFFFF);
+                int alpha = hits * 255 / (SUPERSAMPLE * SUPERSAMPLE);
+                if (alpha < ALPHA_CUTOFF) alpha = 0;
+                image.setPixelRGBA(r.x() + x, r.y() + y, alpha << 24 | 0xFFFFFF);
             }
         }
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("ryscore", "icon/" + key.shape.name().toLowerCase(java.util.Locale.ROOT) + "_" + n);
-        Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
-        return id;
+        Atlas.mark(r);
+        return r;
     }
 
     private static boolean inside(Shape shape, double u, double v) {

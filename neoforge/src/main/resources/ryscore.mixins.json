@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "works.repka.ryscore.neoforge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "GuiGraphicsBatchMixin",
+    "BufferSourceAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
