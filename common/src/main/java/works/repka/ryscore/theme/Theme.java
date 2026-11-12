@@ -20,6 +20,8 @@ public final class Theme {
 
     static {
         fb("card.bg", "panel.bg");
+        fb("slot.dim", "overlay");
+        fb("hud.muted", "text.muted");
         fb("card.border", "panel.border");
         fb("sidebar.bg", "panel.bg");
         fb("slot.border", "slot.bg");

@@ -63,6 +63,15 @@ public final class ThemeManager {
         return next;
     }
 
+    /** Предыдущая тема по кругу: правая кнопка в настройках листает назад. */
+    public static synchronized Theme cycleBack() {
+        List<Theme> list = all();
+        int i = list.indexOf(get());
+        Theme previous = list.get(((i < 0 ? 0 : i) - 1 + list.size()) % list.size());
+        select(previous.id);
+        return previous;
+    }
+
     public static synchronized void reload(ResourceManager manager) {
         Map<String, Theme> loaded = new LinkedHashMap<>();
         Map<ResourceLocation, Resource> found = manager.listResources(FOLDER, p -> p.getPath().endsWith(".json"));

@@ -41,6 +41,18 @@ public final class UiScale {
         set(AUTO);
     }
 
+    /** Предыдущий размер по кругу: правая кнопка в настройках листает назад. */
+    public static void cycleBack() {
+        int current = setting();
+        for (int i = 0; i < OPTIONS.length; i++) {
+            if (OPTIONS[i] == current) {
+                set(OPTIONS[(i - 1 + OPTIONS.length) % OPTIONS.length]);
+                return;
+            }
+        }
+        set(AUTO);
+    }
+
     private static double fit(Window window) {
         double most = Math.min((double) window.getWidth() / BASE_WIDTH, (double) window.getHeight() / BASE_HEIGHT) / BASE_PIXELS;
         return Math.max(MIN_FACTOR, Math.floor(most * 4 + 1e-6) / 4);

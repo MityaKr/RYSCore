@@ -169,13 +169,14 @@ public final class Kit {
         }
     }
 
-    /** Одна вкладка раздела. Возвращает ширину. */
-    public static int sectionTab(GuiGraphics g, Theme t, Hits hits, int x, int y, int h, String label, boolean active, int mx, int my, Runnable action) {
+    /** Одна вкладка раздела. Возвращает ширину. Без действия ({@code action == null}) вкладка неактивна: тусклая и не нажимается. */
+    public static int sectionTab(GuiGraphics g, Theme t, Hits hits, int x, int y, int h, String label, boolean active, int mx, int my, @Nullable Runnable action) {
         int w = (int) Math.ceil(Draw.labelWidth(label, TAB_PX, Weight.SEMIBOLD)) + 12;
-        boolean hot = over(mx, my, x, y, w, h);
+        boolean hot = action != null && over(mx, my, x, y, w, h);
         t.tabLine(g, x, y, w, h, active, hot);
-        Draw.label(g, label, x + 6, y + (h - 1) / 2f, TAB_PX, active ? Weight.SEMIBOLD : Weight.REGULAR, t.tabLineFg(active, hot));
-        hits.add(x, y, w, h, b -> action.run());
+        int fg = action == null ? t.c("text.dim") : t.tabLineFg(active, hot);
+        Draw.label(g, label, x + 6, y + (h - 1) / 2f, TAB_PX, active ? Weight.SEMIBOLD : Weight.REGULAR, fg);
+        if (action != null) hits.add(x, y, w, h, b -> action.run());
         return w;
     }
 

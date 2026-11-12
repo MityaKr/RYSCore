@@ -162,9 +162,8 @@ public final class SceneView implements AutoCloseable {
         int deviceW = right - left, deviceH = bottom - top, deviceY = window.getHeight() - bottom;
         if (deviceW <= 0 || deviceH <= 0) return;
 
-        boolean scissored = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
         int[] box = new int[4];
-        if (scissored) GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, box);
+        boolean scissored = works.repka.ryscore.ui.Scissor.current(box);
         int clipX = scissored ? Math.max(left, box[0]) : left, clipY = scissored ? Math.max(deviceY, box[1]) : deviceY;
         int clipR = scissored ? Math.min(left + deviceW, box[0] + box[2]) : left + deviceW;
         int clipT = scissored ? Math.min(deviceY + deviceH, box[1] + box[3]) : deviceY + deviceH;
