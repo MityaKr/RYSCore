@@ -8,7 +8,8 @@
     "BufferSourceAccessor",
     "GlStateManagerScissorMixin",
     "GlStateManagerBlendMixin",
-    "ToastInstanceMixin"
+    "ToastInstanceMixin",
+    "GameRendererNoticeMixin"
   ],
   "injectors": {
     "defaultRequire": 0
