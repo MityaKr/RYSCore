@@ -129,6 +129,15 @@ public final class Draw {
         label(g, "?", x + (10 - w) / 2f, y + 5f, 11.5f, Type.Weight.MEDIUM, color);
     }
 
+    /** Значок «i» любого размера в единицах GUI (1.9.1): кружок и знак по сетке 24 из макетов, обводка 2 из 24. */
+    public static void info(GuiGraphics g, float x, float y, float size, int color) {
+        float t = Math.max(size / 12f, (float) (1 / scale(g)));
+        roundBorder(g, x, y, size, size, size / 2f, color, t);
+        float cx = x + size / 2f;
+        round(g, cx - t * 0.6f, y + size / 3f - t * 0.6f, t * 1.2f, t * 1.2f, t * 0.6f, color);
+        round(g, cx - t / 2f, y + size * 0.45f, t, size * 0.25f, 0.02f, color);
+    }
+
     /** Значок «i» размером 10×10: рядом с ним живёт подсказка при наведении. */
     public static void info(GuiGraphics g, int x, int y, int color) {
         roundBorder(g, x, y, 10, 10, 5f, color);
@@ -243,6 +252,40 @@ public final class Draw {
         rect(g, x, y, t, h - t, tl);
         rect(g, x + t, y + h - t, w - t, t, br);
         rect(g, x + w - t, y + t, t, h - t, br);
+    }
+
+    /**
+     * Фаска в дробных единицах GUI (1.9.1): края прилипают к пикселям экрана, так что фаска в полединицы не размывается.
+     * {@code inset} меняет светлый и тёмный край местами: вдавленная плашка вместо выпуклой.
+     */
+    public static void bevel(GuiGraphics g, float x, float y, float w, float h, int fill, int light, int dark, float t, boolean inset) {
+        if (w <= 0 || h <= 0) return;
+        double s = scale(g);
+        float x0 = snap(x, s), y0 = snap(y, s), x1 = snap(x + w, s), y1 = snap(y + h, s);
+        float tt = Math.max((float) (1 / s), snap(t, s));
+        int tl = inset ? dark : light;
+        int br = inset ? light : dark;
+        fill(g, x0, y0, x1, y1, fill);
+        fill(g, x0, y0, x1 - tt, y0 + tt, tl);
+        fill(g, x0, y0 + tt, x0 + tt, y1 - tt, tl);
+        fill(g, x0 + tt, y1 - tt, x1, y1, br);
+        fill(g, x1 - tt, y0, x1, y1 - tt, br);
+    }
+
+    private static float snap(float v, double s) {
+        return (float) (Math.round(v * s) / s);
+    }
+
+    /** Заливка прямоугольника в дробных единицах той же пачкой, что {@link #rect}. */
+    private static void fill(GuiGraphics g, float x0, float y0, float x1, float y1, int argb) {
+        if ((argb >>> 24) == 0 || x1 <= x0 || y1 <= y0) return;
+        if (!Batch.active()) {
+            g.fill(Math.round(x0), Math.round(y0), Math.round(x1), Math.round(y1), argb);
+            return;
+        }
+        Atlas.Region white = Atlas.white();
+        float u = white.u(1.5f), v = white.v(1.5f);
+        Batch.quad(g, g.pose().last().pose(), x0, y0, x1, y1, u, v, u, v, argb, white.page());
     }
 
     /** Кегль обычного текста в шрифте темы: близок по величине к шрифту игры, чтобы старые раскладки не сломались. */

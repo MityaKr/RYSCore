@@ -362,13 +362,73 @@ public final class Theme {
         Draw.roundBox(g, x, y, w, h, r, fill, active ? 0 : c("button.border"));
     }
 
-    /** Вкладка раздела окна. Где тема подчёркивает вкладки, активная отмечена линией акцента, иначе обычная вкладка. */
+    /**
+     * Вкладка раздела окна (с 1.9.1 у каждой темы своя): в slate линия акцента под активной, в теме с пилюлями (glass) активная
+     * лежит на пилюле {@code tab.active.bg}, в теме с фаской (vanilla) это закладка у нижнего края: неактивная серая
+     * {@code tab.inactive.bg}, активная цвета панели и сливается с ней. Рамки и чёрного контура у закладки нет.
+     */
     public void tabLine(GuiGraphics g, int x, int y, int w, int h, boolean active, boolean hovered) {
         if (beveled()) {
-            tab(g, x, y, w, h, active, hovered);
+            // закладка: 17 единиц (34 px макета) от нижнего края, светлая кромка сверху и слева
+            float th = Math.min(h, 17);
+            float ty = y + h - th;
+            int fill = active ? c("panel.bg") : c("tab.inactive.bg");
+            if (hovered && !active) fill = Draw.mix(fill, 0xFFFFFFFF, 0.12f);
+            int edge = active ? c("panel.bevel.light") : Draw.mix(fill, 0xFFFFFFFF, 0.3f);
+            Draw.bevel(g, x, ty, w, th + (active ? 1 : 0), fill, edge, fill, 1, false);
+            return;
+        }
+        if (pillTabs) {
+            if (!active) return;
+            float ph = Math.min(h - 2, 15);
+            float py = y + (h - 1) / 2f - ph / 2f;
+            Draw.round(g, x, py, w, ph, ph / 2f, c("tab.active.bg"));
             return;
         }
         if (active) Draw.round(g, x, y + h - 1, w, 1, 0.02f, c("accent"));
+    }
+
+    /**
+     * Карточка, строка списка, плашка задачи (1.9.1): в теме с фаской выпуклая плашка (светлый край сверху и слева, тёмный снизу
+     * и справа), в остальных скруглённая {@code card.bg} с рамкой {@code card.border}. Координаты дробные, радиус в единицах GUI.
+     */
+    public void raised(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        if (beveled()) {
+            Draw.bevel(g, x, y, w, h, c("card.bg"), c("panel.bevel.light"), c("panel.bevel.dark"), 1, false);
+            return;
+        }
+        Draw.roundBox(g, x, y, w, h, radius, c("card.bg"), c("card.border"));
+    }
+
+    /**
+     * Нажатый чип фильтра или выбранный пункт переключателя (1.9.1): в теме с фаской вдавленная кнопка {@code slot.bg} с тёмным
+     * краем сверху и слева, в остальных плашка {@code tab.active.bg}. Текст на ней {@link #pressedFg()}.
+     */
+    public void pressed(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        if (beveled()) {
+            Draw.bevel(g, x, y, w, h, c("slot.bg"), c("slot.bevel.dark"), c("slot.bevel.light"), 1, false);
+            return;
+        }
+        Draw.round(g, x, y, w, h, radius, c("tab.active.bg"));
+    }
+
+    /** Цвет текста на нажатом чипе: в теме с фаской светлый, как на ванильной кнопке, в остальных {@code text.primary}. */
+    public int pressedFg() {
+        return beveled() ? c("tab.inactive.fg") : c("text.primary");
+    }
+
+    /**
+     * Рамка выбранной карточки (1.9.1), поверх её плашки: в теме с фаской белая полоса в 1,5 единицы и тёмная линия внутри
+     * ({@code panel.bevel.light}, {@code panel.bevel.dark}), в остальных тонкая рамка {@code text.secondary}. Не акцент:
+     * в vanilla акцент почти совпадает с «выполнено».
+     */
+    public void selected(GuiGraphics g, float x, float y, float w, float h, float radius) {
+        if (beveled()) {
+            Draw.roundBorder(g, x, y, w, h, 0.02f, c("panel.bevel.light"), 1.5f);
+            Draw.roundBorder(g, x + 1.5f, y + 1.5f, w - 3, h - 3, 0.02f, c("panel.bevel.dark"), 0.5f);
+            return;
+        }
+        Draw.roundBorder(g, x, y, w, h, radius, c("text.secondary"));
     }
 
     /** Цвет текста на вкладке раздела. */

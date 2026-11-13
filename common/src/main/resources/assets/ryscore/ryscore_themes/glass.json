@@ -69,6 +69,9 @@
     "medal.silver": "#c9cfdd",
     "medal.gold": "#c79a12",
     "coin": "#c79a12",
+    "tab.active.bg": "#ffffff",
+    "tab.active.bg.alpha": 0.16,
+    "tab.active.fg": "#ffffff",
     "row.selected.bg": "#ffffff",
     "row.selected.bg.alpha": 0.16
   },
