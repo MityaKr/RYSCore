@@ -24,6 +24,9 @@ final class UiConfig {
     Anchors.Corner mapCorner = Anchors.Corner.TOP_RIGHT;
     int mapPercent = 25;
     Map<Anchors.Element, Anchors.Corner> corners = new EnumMap<>(Anchors.Element.class);
+    /** Звук уведомлений семьи и его громкость в процентах: по умолчанию включён и обычной громкости. */
+    boolean noticeSound = true;
+    int noticeVolume = 100;
 
     private UiConfig() {}
 

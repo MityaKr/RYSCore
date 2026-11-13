@@ -97,6 +97,13 @@ public final class Theme {
         fb("medal.bronze", "#c8794a");
         fb("medal.silver", "#c9cfdd");
         fb("medal.gold", "#c79a12");
+        // уведомления (1.9.2): зелёный и золотой на тёмной плашке HUD, цвет значка на плашке источника
+        fb("hud.ok", "#6fcf8f");
+        fb("hud.gold", "#c79a12");
+        fb("src.quests.fg", "accent");
+        fb("src.scope.fg", "chip.mod.fg");
+        fb("src.teams.fg", "chip.tag.fg");
+        fb("src.pulse.fg", "state.bad");
         fb("coin", "medal.gold");
         String[] cats = {"#e4b23c", "#6fa8ff", "#6fcf8f", "#e58a6a", "#b78cf0", "#5fd0d0", "#d7d36a", "#f08fb8", "#9aa3b5", "#8fd18a", "#c9a37a", "#7f8ff0"};
         for (int i = 0; i < cats.length; i++) fb("cat." + (i + 1), cats[i]);

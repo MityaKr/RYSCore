@@ -50,6 +50,7 @@
     "tooltip.fg": "#ffffff",
     "scroll.thumb": "#6b6b6b",
     "hud.fg": "#ffffff",
+    "hud.muted": "#c6c6c6",
     "link": "#3f76e4",
     "map.bg": "#101010",
     "map.label.bg": "#0f1116",

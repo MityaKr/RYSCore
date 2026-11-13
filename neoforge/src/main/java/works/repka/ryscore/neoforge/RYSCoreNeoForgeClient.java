@@ -29,6 +29,7 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import works.repka.ryscore.RYSCore;
 import works.repka.ryscore.dock.Dock;
+import works.repka.ryscore.ui.Notices;
 import works.repka.ryscore.ui.UiScale;
 import works.repka.ryscore.scene.SceneHooks;
 import works.repka.ryscore.theme.ThemeManager;
@@ -45,7 +46,30 @@ public final class RYSCoreNeoForgeClient {
         SceneHooks.setMesher(RYSCoreNeoForgeClient::mesh);
         modBus.addListener(RYSCoreNeoForgeClient::registerShaders);
         dockHooks();
+        noticeHooks();
     }
+
+    /**
+     * Уведомления семьи (тосты игры) в открытом окне: клик по карточке открывает её дело, крестик и правая кнопка убирают её;
+     * нажатие и отпускание над карточкой в окно под ней не уходят.
+     */
+    private static void noticeHooks() {
+        IEventBus bus = NeoForge.EVENT_BUS;
+        bus.addListener(EventPriority.HIGHEST, (ScreenEvent.MouseButtonPressed.Pre e) -> {
+            if (Notices.click(e.getMouseX(), e.getMouseY(), e.getButton())) {
+                noticePress = true;
+                e.setCanceled(true);
+            }
+        });
+        bus.addListener(EventPriority.HIGHEST, (ScreenEvent.MouseButtonReleased.Pre e) -> {
+            if (noticePress) {
+                noticePress = false;
+                e.setCanceled(true);
+            }
+        });
+    }
+
+    private static boolean noticePress;
 
     /**
      * Панель кнопок семьи: где хозяин заменяет панель FTB, её виджет убирается; где хозяина нет и FTB молчит,
