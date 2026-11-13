@@ -36,6 +36,8 @@ public final class Batch {
     @Nullable
     private static ShaderInstance shader;
     private static int drawCalls;
+    /** Без пачки квады одного вызова примитива копятся и уходят вместе, а не по одному: см. {@link #hold()}. */
+    private static int held;
     /** Для замеров: рисовать каждый квад сразу, как до пачки. */
     public static boolean immediate;
 
@@ -82,7 +84,57 @@ public final class Batch {
         put(i + 2, m, x1, y1, u1, v1, c);
         put(i + 3, m, x1, y0, u1, v0, c);
         quads++;
-        if (!batching) flush();
+        if (!batching && held == 0) flush();
+    }
+
+    /**
+     * Квад произвольной формы с цветом в каждой вершине: линии под углом и их мягкие края.
+     * Все вершины берут выборку из одной точки атласа (u, v), обычно из белого участка. Обход вершин
+     * выравнивается под обход обычной заливки, поэтому отсечение граней его не съедает.
+     */
+    static void quad4(GuiGraphics g, Matrix4f m, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                      int c0, int c1, int c2, int c3, float u, float v, int atlasPage) {
+        boolean batching = active();
+        if (!batching) {
+            if (held == 0 || quads == 0) g.flush();
+        } else if (g instanceof BatchTarget target && target.ryscore$vanillaPending()) g.flush();
+        if (quads > 0 && (atlasPage != page || quads == MAX_QUADS)) flush();
+        page = atlasPage;
+        int i = quads * 4;
+        float[] sc = RenderSystem.getShaderColor();
+        if (sc[0] != 1f || sc[1] != 1f || sc[2] != 1f || sc[3] != 1f) {
+            c0 = tint(c0);
+            c1 = tint(c1);
+            c2 = tint(c2);
+            c3 = tint(c3);
+        }
+        // обход как у заливки: левый верх, левый низ, правый низ, правый верх (по экрану против часовой стрелки)
+        if ((x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0) <= 0) {
+            put(i, m, x0, y0, u, v, c0);
+            put(i + 1, m, x1, y1, u, v, c1);
+            put(i + 2, m, x2, y2, u, v, c2);
+            put(i + 3, m, x3, y3, u, v, c3);
+        } else {
+            put(i, m, x0, y0, u, v, c0);
+            put(i + 1, m, x3, y3, u, v, c3);
+            put(i + 2, m, x2, y2, u, v, c2);
+            put(i + 3, m, x1, y1, u, v, c1);
+        }
+        quads++;
+        if (!batching && held == 0) flush();
+    }
+
+    /**
+     * Начало примитива из многих квадов (линии, дуги, кольца): без пачки они не рисуются по одному,
+     * а уходят одним вызовом в {@link #release()}. С пачкой ничего не меняет.
+     */
+    static void hold() {
+        held++;
+    }
+
+    static void release() {
+        if (held > 0) held--;
+        if (held == 0 && !active()) flush();
     }
 
     private static void put(int vertex, Matrix4f m, float x, float y, float u, float v, int color) {

@@ -175,6 +175,65 @@ public final class Draw {
         end(g);
     }
 
+    // --- линии: всё в единицах текущей матрицы, края сглажены, квады уходят в общую пачку ---
+
+    /** Отрезок под любым углом толщиной {@code width} (единицы текущей матрицы), со сглаженным краем. */
+    public static void line(GuiGraphics g, float x0, float y0, float x1, float y1, float width, int argb) {
+        Lines.line(g, x0, y0, x1, y1, width, argb);
+    }
+
+    /**
+     * Много отдельных отрезков одного цвета за вызов: по четыре числа на отрезок (x0, y0, x1, y1) в {@code xy}.
+     * Для карт и графов: тысячи отрезков ложатся в пачку без лишних сбросов.
+     */
+    public static void lines(GuiGraphics g, float[] xy, int segments, float width, int argb) {
+        Lines.lines(g, xy, segments, width, argb, null);
+    }
+
+    /** То же с цветом на каждый отрезок: {@code colors[i]} для отрезка {@code i}. */
+    public static void lines(GuiGraphics g, float[] xy, int[] colors, int segments, float width) {
+        Lines.lines(g, xy, segments, width, 0, colors);
+    }
+
+    /** Пунктир: штрих {@code dash} и промежуток {@code gap} в единицах, первый штрих от начала линии. */
+    public static void dashed(GuiGraphics g, float x0, float y0, float x1, float y1, float width, float dash, float gap, int argb) {
+        Lines.dashed(g, x0, y0, x1, y1, width, dash, gap, 0, argb);
+    }
+
+    /** Пунктир со сдвигом узора {@code phase} вдоль линии: бегущие штрихи, общий узор у соседних отрезков. */
+    public static void dashed(GuiGraphics g, float x0, float y0, float x1, float y1, float width, float dash, float gap, float phase, int argb) {
+        Lines.dashed(g, x0, y0, x1, y1, width, dash, gap, phase, argb);
+    }
+
+    /**
+     * Ломаная толщиной {@code width}: по два числа на точку в {@code xy}, {@code points} точек.
+     * Стыки острые со срезом у очень острых углов, без зазоров и двойной прозрачности. {@code closed} замыкает контур.
+     */
+    public static void polyline(GuiGraphics g, float[] xy, int points, boolean closed, float width, int argb) {
+        Lines.polyline(g, xy, points, closed, width, argb);
+    }
+
+    /**
+     * Дуга по средней линии радиуса {@code radius}. Углы в градусах от оси x, положительные идут по часовой стрелке
+     * (ось y вниз, как на экране). Число отрезков подбирается по размеру в пикселях экрана.
+     */
+    public static void arc(GuiGraphics g, float cx, float cy, float radius, float startDeg, float sweepDeg, float width, int argb) {
+        Lines.arc(g, cx, cy, radius, startDeg, sweepDeg, width, argb);
+    }
+
+    /**
+     * Кольцо любой толщины: внешний радиус {@code radius}, толщина внутрь {@code thickness}.
+     * Толщина не меньше радиуса даёт сглаженный круг. Для орбит, обводки вехи, кольца прогресса.
+     */
+    public static void ring(GuiGraphics g, float cx, float cy, float radius, float thickness, int argb) {
+        Lines.ring(g, cx, cy, radius, thickness, argb);
+    }
+
+    /** Сглаженный круг радиуса {@code radius}: узел карты любого размера. */
+    public static void disc(GuiGraphics g, float cx, float cy, float radius, int argb) {
+        Lines.ring(g, cx, cy, radius, radius, argb);
+    }
+
     /** Ванильный бевель: светлая кромка сверху-слева, тёмная снизу-справа. Для слотов передаётся inset = true. */
     public static void bevel(GuiGraphics g, int x, int y, int w, int h, int fill, int light, int dark, int t, boolean inset) {
         int tl = inset ? dark : light;

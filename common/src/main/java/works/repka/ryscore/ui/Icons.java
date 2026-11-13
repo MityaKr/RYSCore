@@ -7,7 +7,81 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /** Значки из макетов: фигура задаётся формулой и рисуется в пикселях экрана, поэтому гладкая на любом масштабе. */
 public final class Icons {
-    public enum Shape { STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK, PLUS, PIN, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN, GRIP, PENCIL, UNDO, REDO, DOT, HALF_DOT }
+    /**
+     * Фигуры значков. С {@code MAP} и дальше (1.9.0) значки взяты из макетов книги квестов: контур в квадрате 24
+     * с обводкой 2, как в SVG макета ({@link IconPaths}).
+     */
+    public enum Shape {
+        STAR, CROSS, MAGNIFIER, GEAR, ARROW, CHECK, PLUS, PIN, CHEVRON_LEFT, CHEVRON_RIGHT, CHEVRON_DOWN, GRIP, PENCIL, UNDO, REDO, DOT, HALF_DOT,
+        /** Карта: три узла и связи. */
+        MAP,
+        /** Список: строки с точками; заодно «сетка». */
+        LIST,
+        /** «Вся книга», задача «побывать». */
+        COMPASS,
+        /** «К моему квесту». */
+        TARGET,
+        /** Свернуть боковую панель. */
+        SIDEBAR,
+        /** Уменьшить масштаб. */
+        MINUS,
+        /** «Другой путь», ссылка. */
+        ROUTE,
+        /** Веха, титул, «Вне карты». */
+        FLAG,
+        /** Ошибка, замечание, врезка «важно». */
+        WARN,
+        /** «Откроет». */
+        KEY,
+        /** Видно игрокам, «Игрок увидит». */
+        EYE,
+        /** Команда. */
+        USERS,
+        /** Повторяемый квест, «Повторить». */
+        REPEAT,
+        /** Совет, особая награда. */
+        SPARK,
+        SAVE,
+        ARCHIVE,
+        /** «Из руки». */
+        HAND,
+        /** Показ в гайде. */
+        PLAY,
+        /** Задача «победить». */
+        SKULL,
+        /** Статистика, «где застревают». */
+        CHART,
+        /** Гайд. */
+        BOOK
+    }
+
+    /** Контуры значков из макетов (viewBox 24, обводка 2). */
+    private static final Map<Shape, double[]> PATHS = new java.util.EnumMap<>(Shape.class);
+
+    static {
+        PATHS.put(Shape.MAP, IconPaths.compile("circle 6 6 2.5", "circle 18 12 2.5", "circle 6 18 2.5",
+            "M8.5 6H12a3 3 0 0 1 3 3v.6M8.5 18H12a3 3 0 0 0 3-3v-.6"));
+        PATHS.put(Shape.LIST, IconPaths.compile("M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"));
+        PATHS.put(Shape.COMPASS, IconPaths.compile("circle 12 12 9", "M15.5 8.5l-2 5-5 2 2-5 5-2z"));
+        PATHS.put(Shape.TARGET, IconPaths.compile("circle 12 12 7", "circle 12 12 2", "M12 2v3M12 19v3M2 12h3M19 12h3"));
+        PATHS.put(Shape.SIDEBAR, IconPaths.compile("rect 3.5 4.5 17 15 2.5", "M9.5 4.5v15"));
+        PATHS.put(Shape.MINUS, IconPaths.compile("M5 12h14"));
+        PATHS.put(Shape.ROUTE, IconPaths.compile("circle 6 18 2.5", "circle 18 6 2.5", "M8.5 18H14a3 3 0 0 0 3-3V8.5"));
+        PATHS.put(Shape.FLAG, IconPaths.compile("M6 21V4M6 4h11l-2 4 2 4H6"));
+        PATHS.put(Shape.WARN, IconPaths.compile("M12 4l9 16H3L12 4zM12 10v5M12 17.5h.01"));
+        PATHS.put(Shape.KEY, IconPaths.compile("circle 8 15 3.5", "M10.5 12.5L19 4M15 8l2.5 2.5"));
+        PATHS.put(Shape.EYE, IconPaths.compile("M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z", "circle 12 12 2.7"));
+        PATHS.put(Shape.USERS, IconPaths.compile("circle 9 9 3.2", "M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 6.2a3 3 0 0 1 0 5.6M17.5 14.5c2 .8 3.5 2.9 3.5 5.5"));
+        PATHS.put(Shape.REPEAT, IconPaths.compile("M4 12a8 8 0 0 1 14-5l2 2M20 5v4h-4M20 12a8 8 0 0 1-14 5l-2-2M4 19v-4h4"));
+        PATHS.put(Shape.SPARK, IconPaths.compile("M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3zM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16z"));
+        PATHS.put(Shape.SAVE, IconPaths.compile("M5 4h11l3 3v13H5V4zM8 4v5h7V4M8 20v-6h8v6"));
+        PATHS.put(Shape.ARCHIVE, IconPaths.compile("M4 5h16v5H4zM6 10v9h12v-9M10 14h4"));
+        PATHS.put(Shape.HAND, IconPaths.compile("M8 12V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a5 5 0 0 1-4-2l-2.5-4a1.5 1.5 0 0 1 2.5-1.5L8 14"));
+        PATHS.put(Shape.PLAY, IconPaths.compile("M7 5l12 7-12 7V5z"));
+        PATHS.put(Shape.SKULL, IconPaths.compile("M5 11a7 7 0 0 1 14 0c0 2.5-1 4-2.5 5v3h-9v-3C6 15 5 13.5 5 11zM9.5 11.5h.01M14.5 11.5h.01M10.5 19v-2M13.5 19v-2"));
+        PATHS.put(Shape.CHART, IconPaths.compile("M5 20V10M12 20V4M19 20v-7"));
+        PATHS.put(Shape.BOOK, IconPaths.compile("M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4zM5 17a3 3 0 0 1 3-3h11"));
+    }
 
     private record Key(Shape shape, int pixels) {}
 
@@ -71,6 +145,8 @@ public final class Icons {
     }
 
     private static boolean inside(Shape shape, double u, double v) {
+        double[] path = PATHS.get(shape);
+        if (path != null) return IconPaths.inside(path, u, v);
         return switch (shape) {
             case STAR -> star(u, v);
             case CHEVRON_RIGHT -> segment(u, v, 0.36, 0.18, 0.68, 0.5) < 0.075 || segment(u, v, 0.68, 0.5, 0.36, 0.82) < 0.075;
@@ -105,6 +181,7 @@ public final class Icons {
                 boolean tooth = ((angle + 2 * Math.PI) % (Math.PI / 4)) < Math.PI / 8;
                 yield d > 0.15 && d < (tooth ? 0.43 : 0.32);
             }
+            default -> false;
         };
     }
 

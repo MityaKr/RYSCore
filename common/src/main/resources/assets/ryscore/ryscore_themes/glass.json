@@ -55,7 +55,22 @@
     "plate.bg": "#c6c6c6",
     "plate.border": "#ffffff",
     "scroll.thumb": "#ffffff",
-    "scroll.thumb.alpha": 0.35
+    "scroll.thumb.alpha": 0.35,
+    "link": "#8fb4ff",
+    "map.bg": "#000000",
+    "map.bg.alpha": 0.3,
+    "map.label.bg": "#0f1116",
+    "map.label.bg.alpha": 0.84,
+    "map.label.fg": "#f7f8fb",
+    "map.node.done": "#6fcf8f",
+    "map.node.open": "#f7f8fb",
+    "map.node.locked": "#5f6678",
+    "medal.bronze": "#c8794a",
+    "medal.silver": "#c9cfdd",
+    "medal.gold": "#c79a12",
+    "coin": "#c79a12",
+    "row.selected.bg": "#ffffff",
+    "row.selected.bg.alpha": 0.16
   },
   "metrics": {
     "panel.radius": 20,

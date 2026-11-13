@@ -22,7 +22,14 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
+import java.util.List;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import works.repka.ryscore.RYSCore;
+import works.repka.ryscore.dock.Dock;
+import works.repka.ryscore.ui.UiScale;
 import works.repka.ryscore.scene.SceneHooks;
 import works.repka.ryscore.theme.ThemeManager;
 import works.repka.ryscore.ui.Batch;
@@ -37,6 +44,38 @@ public final class RYSCoreNeoForgeClient {
             event.registerReloadListener((ResourceManagerReloadListener) resources -> SceneHooks.reloaded()));
         SceneHooks.setMesher(RYSCoreNeoForgeClient::mesh);
         modBus.addListener(RYSCoreNeoForgeClient::registerShaders);
+        dockHooks();
+    }
+
+    /**
+     * Панель кнопок семьи: где хозяин заменяет панель FTB, её виджет убирается; где хозяина нет и FTB молчит,
+     * кор сам рисует панель слева от окна инвентаря и ловит по ней нажатия.
+     */
+    private static void dockHooks() {
+        IEventBus bus = NeoForge.EVENT_BUS;
+        // самый низкий приоритет: виджет FTB добавляется в этом же событии и должен уже быть на экране
+        bus.addListener(EventPriority.LOWEST, (ScreenEvent.Init.Post e) -> {
+            Dock.screenChanged();
+            if (!Dock.replaces(e.getScreen())) return;
+            for (var listener : List.copyOf(e.getListenersList())) {
+                if (Dock.isFtbWidget(listener)) e.removeListener(listener);
+            }
+            Dock.widgetRemoved();
+        });
+        bus.addListener((ScreenEvent.Render.Post e) -> {
+            if (!(e.getScreen() instanceof AbstractContainerScreen<?> screen) || !Dock.standalone(screen)) return;
+            int left = (int) Math.floor(UiScale.fromGui(screen.getGuiLeft())), top = (int) Math.floor(UiScale.fromGui(screen.getGuiTop()));
+            int mx = (int) Math.floor(UiScale.mouseX()), my = (int) Math.floor(UiScale.mouseY());
+            UiScale.render(e.getGuiGraphics(), g -> {
+                Dock.layoutBeside(screen, left, top);
+                Dock.render(g, ThemeManager.get(), mx, my);
+                Dock.renderTooltip(g, ThemeManager.get(), mx, my);
+            });
+        });
+        bus.addListener((ScreenEvent.MouseButtonPressed.Pre e) -> {
+            if (!Dock.standalone(e.getScreen())) return;
+            if (Dock.click(UiScale.fromGui(e.getMouseX()), UiScale.fromGui(e.getMouseY()), e.getButton())) e.setCanceled(true);
+        });
     }
 
     /** Шейдер пачки кора: цвет в вершинах, отбрасываются только полностью прозрачные пиксели. */

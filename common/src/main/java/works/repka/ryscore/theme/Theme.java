@@ -83,6 +83,28 @@ public final class Theme {
         fb("button.fg", "text.body");
         fb("tooltip.fg", "text.primary");
         fb("slot.miss.border", "state.warn");
+        // книга квестов и карта (1.9.0). Значение с «#» это готовый цвет: им кончается цепочка
+        fb("link", "state.order");
+        // выбранная строка списка и строка «один из»: светлая подложка, не акцент
+        fb("row.selected.bg", "tab.active.bg");
+        fb("map.bg", "input.bg");
+        fb("map.label.bg", "tooltip.bg");
+        // полотно тёмное в любой теме: запасные взяты из slate, а не из текста окна
+        fb("map.label.fg", "#f7f8fb");
+        fb("map.node.done", "#6fcf8f");
+        fb("map.node.open", "#f7f8fb");
+        fb("map.node.locked", "#5f6678");
+        fb("medal.bronze", "#c8794a");
+        fb("medal.silver", "#c9cfdd");
+        fb("medal.gold", "#c79a12");
+        fb("coin", "medal.gold");
+        String[] cats = {"#e4b23c", "#6fa8ff", "#6fcf8f", "#e58a6a", "#b78cf0", "#5fd0d0", "#d7d36a", "#f08fb8", "#9aa3b5", "#8fd18a", "#c9a37a", "#7f8ff0"};
+        for (int i = 0; i < cats.length; i++) fb("cat." + (i + 1), cats[i]);
+    }
+
+    /** Цвета разделов по кругу: {@code cat.1} … {@code cat.12}, номер с нуля. */
+    public int category(int index) {
+        return c("cat." + (Math.floorMod(index, 12) + 1));
     }
 
     private static void fb(String key, String fallback) {
@@ -162,6 +184,10 @@ public final class Theme {
         String k = key, last = key;
         Integer v = null;
         for (int depth = 0; depth < 6 && k != null; depth++) {
+            if (k.startsWith("#")) {
+                v = parseColor(k);
+                break;
+            }
             v = colors.get(k);
             if (v != null) break;
             last = k;

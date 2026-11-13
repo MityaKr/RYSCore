@@ -46,7 +46,20 @@
     "tab.active.fg": "#3f3f3f",
     "tooltip.fg": "#ffffff",
     "scroll.thumb": "#6b6b6b",
-    "hud.fg": "#ffffff"
+    "hud.fg": "#ffffff",
+    "link": "#3f76e4",
+    "map.bg": "#101010",
+    "map.label.bg": "#0f1116",
+    "map.label.bg.alpha": 0.84,
+    "map.label.fg": "#f7f8fb",
+    "map.node.done": "#6fcf8f",
+    "map.node.open": "#f7f8fb",
+    "map.node.locked": "#5f6678",
+    "medal.bronze": "#8f4a1f",
+    "medal.silver": "#5a606c",
+    "medal.gold": "#a87900",
+    "coin": "#a87900",
+    "row.selected.bg": "#a0a0a0"
   },
   "metrics": {
     "sidebar.flush": 1,
