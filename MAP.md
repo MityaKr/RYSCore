@@ -2,7 +2,7 @@
 
 Собрана `_shared/tools/make-map.py` 2026-11-18. Руками не править: после структурных правок пересобрать.
 
-Java: 57 файлов, 11354 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
+Java: 57 файлов, 11417 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
 Читать сначала: `CLAUDE.md`, `README.md`.
 
 ## Точки входа
@@ -11,11 +11,11 @@ Java: 57 файлов, 11354 строк. Модули gradle: `common`. Пере
 - миксины: `neoforge/src/main/resources/ryscore.mixins.json`
 
 ## Папки
-- `common/` — 401 файлов
+- `common/` — 380 файлов
 - `docs/` — 1 файлов
 - `gradle/` — 2 файлов
-- `neoforge/` — 314 файлов
-- `repo/` — 380 файлов
+- `neoforge/` — 287 файлов
+- `repo/` — 395 файлов
 
 ## `common/src/main/java` — пакет `works.repka.ryscore`
 
@@ -38,7 +38,7 @@ Java: 57 файлов, 11354 строк. Модули gradle: `common`. Пере
 - `MapApi` 997 — Карта для модов семьи (1.11), только на клиенте, из главного потока.
 
 **migrate** (2)
-- `Migrations` 850 — Переезд мира с FTB (1.11): реестр шагов, флаг сборки, копия, отметка «сделано» и отчёт.
+- `Migrations` 881 — Переезд мира с FTB (1.11): реестр шагов, флаг сборки, копия, отметка «сделано» и отчёт.
 - `Snbt` 297 — Читатель вольного SNBT, которым пишет FTB Library (1.11): запятые необязательны, ключи бывают без кавычек (в том числе UUID с дефисами), в файлах настроек есть комментарии # до кон…
 
 **scene** (5)
@@ -91,7 +91,7 @@ Java: 57 файлов, 11354 строк. Модули gradle: `common`. Пере
 ## `common/src/test/java` — пакет `works.repka.ryscore.migrate`
 
 **(корень)** (2)
-- `MigrationsTest` 268
+- `MigrationsTest` 300
 - `SnbtTest` 170 — Заготовки повторяют устройство файлов FTB Teams, FTB Chunks и настроек FTB Library; UUID выдуманы.
 
 ## `neoforge/src/main/java` — пакет `works.repka.ryscore.neoforge`
