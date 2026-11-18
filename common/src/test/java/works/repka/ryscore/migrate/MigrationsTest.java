@@ -207,7 +207,36 @@ class MigrationsTest {
     }
 
     @Test
-    void partialStepIsMarkedPartial() throws IOException {
+    void partialStepRepeatsUntilWhole() throws IOException {
+        flag("{\"v\":1,\"steps\":[\"teams\"]}");
+        boolean[] broken = {true};
+        Migrations.register(new Migrations.Step() {
+            @Override public String id() { return "teams"; }
+            @Override public int order() { return 10; }
+            @Override public Migrations.Side side() { return Migrations.Side.SERVER; }
+            @Override public boolean needed(Migrations.Context c) { return true; }
+            @Override public Migrations.Report run(Migrations.Context c) {
+                ran.add("teams");
+                Migrations.Report r = Migrations.Report.create().count("teams", broken[0] ? 1 : 2);
+                return broken[0] ? r.partial("файл b.snbt не прочитан") : r;
+            }
+        });
+        assertEquals(Migrations.Status.PARTIAL, run().outcome("teams").status());
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.contains("частично") && l.contains("b.snbt")));
+        // отметки «сделано» нет: шаг повторяется и при запуске, и командой
+        assertEquals(Migrations.Status.PARTIAL, run().outcome("teams").status());
+        assertEquals(Migrations.Status.PARTIAL, Migrations.runManual("teams", game, world, null).status());
+        assertEquals(3, ran.size());
+        assertEquals(1, backups());
+        broken[0] = false;
+        assertEquals(Migrations.Status.DONE, run().outcome("teams").status());
+        assertEquals(Migrations.Status.ALREADY_DONE, run().outcome("teams").status());
+        assertEquals(4, ran.size());
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("teams") && l.contains("сделан ") && !l.contains("частично")));
+    }
+
+    @Test
+    void partialStepCanBeUndone() throws IOException {
         flag("{\"v\":1,\"steps\":[\"claims\"]}");
         Migrations.register(new Migrations.Step() {
             @Override public String id() { return "claims"; }
@@ -217,10 +246,13 @@ class MigrationsTest {
             @Override public Migrations.Report run(Migrations.Context c) {
                 return Migrations.Report.create().count("chunks", 133).partial("файл b.snbt не прочитан");
             }
+            @Override public Migrations.Report undo(Migrations.Context c) {
+                return Migrations.Report.create().line("очищено");
+            }
         });
         assertEquals(Migrations.Status.PARTIAL, run().outcome("claims").status());
-        assertEquals(Migrations.Status.ALREADY_DONE, run().outcome("claims").status());
-        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.contains("частично")));
+        assertEquals(Migrations.Status.UNDONE, Migrations.undo("claims", game, world, null).status());
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("claims") && l.contains("не запускался")));
     }
 
     @Test

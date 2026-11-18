@@ -46,6 +46,9 @@ import works.repka.ryscore.RYSCore;
  *       {@code data/rys*.dat} и пути из {@link Step#backup()} в {@code world/rys/backup/ftb-<время>/}. Не вышло скопировать —
  *       серверные шаги не идут.</li>
  *   <li>Отметка в {@code world/rys/migrate.json} (клиент: в папке, которую дал мод) ставится после успешного {@link Step#run}.</li>
+ *   <li>Частичный шаг ({@link Report#partial}: файл одной команды не прочитался) отметку «сделано» не получает (1.13.1):
+ *       запись помечена «частично», в лог идёт предупреждение оператору, и шаг повторяется при следующем запуске или
+ *       командой, пока не пройдёт целиком. Поэтому повтор шага обязан быть безопасным: перенесённое пропускается.</li>
  *   <li>Своё не затирать: шаг переносит только то, чего в базе мода ещё нет, и пишет пропущенное в {@link Report#skipped}.</li>
  *   <li>Сбой шага: отметки нет, причина в лог (у {@link Snbt.SyntaxError} файл и строка), следующие шаги идут дальше,
  *       при следующем запуске шаг повторится.</li>
@@ -188,7 +191,10 @@ public final class Migrations {
             return this;
         }
 
-        /** Перенесено не всё (файл одной команды не прочитался): отметка ставится с пометкой «частично». */
+        /**
+         * Перенесено не всё (файл одной команды не прочитался). С 1.13.1 отметки «сделано» нет: запись помечена «частично»,
+         * шаг повторится при следующем запуске и перенесёт непрочитанное, когда файл починят.
+         */
         public Report partial(String why) {
             partial = true;
             lines.add(why);
@@ -267,7 +273,7 @@ public final class Migrations {
     public enum Status {
         /** Шаг прошёл, отметка стоит. */
         DONE,
-        /** Шаг прошёл не целиком, отметка стоит с пометкой «частично». */
+        /** Шаг прошёл не целиком: прочитанное перенесено, отметки «сделано» нет (1.13.1), повторится при следующем запуске. */
         PARTIAL,
         /** Отметка уже была. */
         ALREADY_DONE,
@@ -490,6 +496,8 @@ public final class Migrations {
                 line = "не запускался";
             } else if (Snbt.bool(entry, "done", false)) {
                 line = (Snbt.bool(entry, "partial", false) ? "сделан частично " : "сделан ") + Snbt.string(entry, "time", "");
+            } else if (Snbt.bool(entry, "partial", false)) {
+                line = "частично " + Snbt.string(entry, "time", "") + ", повторится при запуске: " + String.join("; ", lines(entry));
             } else {
                 line = "сбой " + Snbt.string(entry, "time", "") + ": " + Snbt.string(entry, "error", "");
             }
@@ -498,10 +506,16 @@ public final class Migrations {
         return out;
     }
 
+    private static List<String> lines(JsonObject entry) {
+        List<String> out = new ArrayList<>();
+        for (JsonElement e : Snbt.array(entry, "lines")) if (e.isJsonPrimitive()) out.add(e.getAsString());
+        return out;
+    }
+
     static String text(Outcome o) {
         return switch (o.status) {
             case DONE -> "готово" + (o.message.isEmpty() ? "" : ", " + o.message);
-            case PARTIAL -> "частично, " + o.message;
+            case PARTIAL -> "частично, " + o.message + "; отметки нет, повторится при следующем запуске";
             case ALREADY_DONE -> "пропущен, уже сделан " + o.message;
             case NOT_IN_FLAG -> "пропущен, " + o.message;
             case NOT_NEEDED -> "не нужен" + (o.message.isEmpty() ? "" : ", " + o.message);
@@ -570,7 +584,7 @@ public final class Migrations {
                 Step s = step(id);
                 if (s == null) return new Outcome(id, Status.FAILED, "такого шага нет", null);
                 state = State.load(stateDir);
-                if (!state.done(id)) return new Outcome(id, Status.FAILED, "отметки нет, откатывать нечего", null);
+                if (!state.done(id) && !state.partial(id)) return new Outcome(id, Status.FAILED, "отметки нет, откатывать нечего", null);
                 Outcome o;
                 try {
                     Report r = s.undo(context(s));
@@ -606,6 +620,12 @@ public final class Migrations {
                 long ms = (System.nanoTime() - start) / 1_000_000;
                 state.markDone(id, r, versions.apply(s.modId()));
                 state.save();
+                if (r.isPartial()) {
+                    // прочитанное уже в базе; повтор безопасен: шаг пропускает перенесённое и доберёт остальное
+                    RYSCore.LOG.warn("{} {}: перенесено не всё ({}). Отметки «сделано» нет: шаг повторится при следующем запуске "
+                        + "или командой /rys migrate run {}, перенесённое не задвоится. Почините файлы FTB, копия в {}",
+                        TAG, id, String.join("; ", r.lines()), id, state.backup() == null ? "нет" : resolveBackup());
+                }
                 return new Outcome(id, r.isPartial() ? Status.PARTIAL : Status.DONE, (r.summary() + (r.summary().isEmpty() ? "" : ", ") + ms + " мс"), r);
             } catch (Throwable t) {
                 return fail(s, t);
@@ -774,16 +794,26 @@ public final class Migrations {
             return Snbt.bool(entry(id), "done", false);
         }
 
+        /** Шаг прошёл частично и ждёт повтора (1.13.1). */
+        boolean partial(String id) {
+            JsonObject e = entry(id);
+            return !Snbt.bool(e, "done", false) && Snbt.bool(e, "partial", false);
+        }
+
         JsonObject data(String id) {
             JsonObject e = entryOrNew(id);
             if (!e.has("data") || !e.get("data").isJsonObject()) e.add("data", new JsonObject());
             return e.getAsJsonObject("data");
         }
 
+        /** Полный шаг: «сделано». Частичный (1.13.1): только «частично», без «сделано», шаг повторится. */
         void markDone(String id, Report r, String version) {
             JsonObject e = entryOrNew(id);
-            e.addProperty("done", true);
+            e.addProperty("done", !r.isPartial());
             e.addProperty("partial", r.isPartial());
+            JsonArray lines = new JsonArray();
+            r.lines().forEach(lines::add);
+            e.add("lines", lines);
             e.addProperty("time", java.time.Instant.now().toString());
             e.addProperty("version", version);
             e.remove("error");
@@ -798,6 +828,7 @@ public final class Migrations {
         void markFailed(String id, String why) {
             JsonObject e = entryOrNew(id);
             e.addProperty("done", false);
+            e.remove("partial");
             e.addProperty("time", java.time.Instant.now().toString());
             e.addProperty("error", why);
         }
