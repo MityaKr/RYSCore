@@ -1,8 +1,8 @@
 # Карта проекта RYSCore
 
-Собрана `_shared/tools/make-map.py` 2026-11-17. Руками не править: после структурных правок пересобрать.
+Собрана `_shared/tools/make-map.py` 2026-11-18. Руками не править: после структурных правок пересобрать.
 
-Java: 47 файлов, 7741 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
+Java: 48 файлов, 8119 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
 Читать сначала: `CLAUDE.md`, `README.md`.
 
 ## Точки входа
@@ -10,11 +10,11 @@ Java: 47 файлов, 7741 строк. Модули gradle: `common`. Пере�
 - миксины: `neoforge/src/main/resources/ryscore.mixins.json`
 
 ## Папки
-- `common/` — 259 файлов
+- `common/` — 260 файлов
 - `docs/` — 1 файлов
 - `gradle/` — 2 файлов
-- `neoforge/` — 191 файлов
-- `repo/` — 320 файлов
+- `neoforge/` — 203 файлов
+- `repo/` — 335 файлов
 
 ## `common/src/main/java` — пакет `works.repka.ryscore`
 
@@ -25,6 +25,9 @@ Java: 47 файлов, 7741 строк. Модули gradle: `common`. Пере�
 - `Dock` 528 — Панель кнопок семьи в инвентаре: сетка цветных плиток из DockButtons и, если панель заменяет панель FTB, кнопки FTB Library в том же стиле (их действия, значки и подсказки).
 - `DockButton` 130 — Кнопка мода семьи на панели кнопок в инвентаре: значок на цветной плитке, подпись и клавиша в подсказке, действие.
 - `DockButtons` 80 — Реестр кнопок семьи для панели кнопок в инвентаре (Dock).
+
+**links** (1)
+- `ItemLinks` 378 — Сведения о предмете от модов семьи (1.10): мод рассказывает просмотрщику, где предмет встречается у него (книга квестов: сделки магазина, награды, задачи).
 
 **scene** (5)
 - `BlockScene` 70 — Неизменяемая блоковая структура для SceneView.
