@@ -68,7 +68,45 @@ public final class Icons {
         /** Прогрузка чанка (1.11). */
         ANCHOR,
         /** Ещё действия, меню (1.11). */
-        DOTS
+        DOTS,
+        /** Портал, место портала в другом измерении (1.12). */
+        PORTAL,
+        /** Пещеры, этаж (1.12). */
+        CAVE,
+        /** День (1.12). */
+        SUN,
+        /** Ночь (1.12). */
+        MOON,
+        /** Телепорт (1.12). */
+        TELEPORT,
+        /** Тревога, колокол (1.12). */
+        BELL,
+        /** Дерево, ферма (1.12). */
+        TREE,
+        /** Блок, склад (1.12). */
+        CUBE,
+        /** Сервер, оператор (1.12). */
+        SERVER,
+        /** Вверх, этаж выше (1.12). */
+        UP,
+        /** Вниз, этаж ниже (1.12). */
+        DOWN,
+        /** Бой, враждебный (1.12). */
+        SWORD,
+        /** Сердце, мирный (1.12). */
+        HEART,
+        /** Дверь, вход (1.12). */
+        DOOR,
+        /** Огонь, опасность (1.12). */
+        FLAME,
+        /** Машина, механизм (1.12). */
+        ROBOT,
+        /** Поделиться, точка в чат (1.12). */
+        LINK,
+        /** Фильтр (1.12). */
+        FILTER,
+        /** Линейка, расстояние (1.12). */
+        RULER
     }
 
     /** Контуры значков из макетов (viewBox 24, обводка 2). */
@@ -106,6 +144,26 @@ public final class Icons {
         PATHS.put(Shape.COPY, IconPaths.compile("rect 8 8 12 12 2", "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"));
         PATHS.put(Shape.ANCHOR, IconPaths.compile("circle 12 5.5 2", "M12 7.5V20M5 13a7 7 0 0 0 14 0M9 11h6"));
         PATHS.put(Shape.DOTS, IconPaths.compile("M6 12h.01M12 12h.01M18 12h.01"));
+        // значки карты (1.12) из макетов _audit/map (m.py)
+        PATHS.put(Shape.PORTAL, IconPaths.compile("rect 6 3 12 18 2", "M10 8v8M14 8v8"));
+        PATHS.put(Shape.CAVE, IconPaths.compile("M3 20c0-9 4-15 9-15s9 6 9 15M9 20c0-4 1-6 3-6s3 2 3 6"));
+        PATHS.put(Shape.SUN, IconPaths.compile("circle 12 12 4", "M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M5 5l1.8 1.8M17.2 17.2L19 19M5 19l1.8-1.8M17.2 6.8L19 5"));
+        PATHS.put(Shape.MOON, IconPaths.compile("M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"));
+        PATHS.put(Shape.TELEPORT, IconPaths.compile("M12 3v6M9 6l3 3 3-3M5 14a7 3.5 0 0 0 14 0 7 3.5 0 0 0-14 0zM5 14v3a7 3.5 0 0 0 14 0v-3"));
+        PATHS.put(Shape.BELL, IconPaths.compile("M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 20a2 2 0 0 0 4 0"));
+        PATHS.put(Shape.TREE, IconPaths.compile("M12 3l6 8h-3l4 6H5l4-6H6l6-8zM12 17v4"));
+        PATHS.put(Shape.CUBE, IconPaths.compile("M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5l8 4.5 8-4.5M12 12v9"));
+        PATHS.put(Shape.SERVER, IconPaths.compile("rect 4 4 16 7 2", "rect 4 13 16 7 2", "M8 7.5h.01M8 16.5h.01"));
+        PATHS.put(Shape.UP, IconPaths.compile("M6 15l6-6 6 6"));
+        PATHS.put(Shape.DOWN, IconPaths.compile("M6 9l6 6 6-6"));
+        PATHS.put(Shape.SWORD, IconPaths.compile("M19 4l-9 9M19 4h-4M19 4v4M7 13l4 4M5 19l4-4M4 20l1-1"));
+        PATHS.put(Shape.HEART, IconPaths.compile("M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"));
+        PATHS.put(Shape.DOOR, IconPaths.compile("M6 21V4h12v17M4 21h16M14.5 12.5h.01"));
+        PATHS.put(Shape.FLAME, IconPaths.compile("M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"));
+        PATHS.put(Shape.ROBOT, IconPaths.compile("rect 5 8 14 11 2", "M12 8V4M9 13h.01M15 13h.01M9.5 16.5h5"));
+        PATHS.put(Shape.LINK, IconPaths.compile("circle 6 12 2.5", "circle 18 6 2.5", "circle 18 18 2.5", "M8.2 11l7.6-3.8M8.2 13l7.6 3.8"));
+        PATHS.put(Shape.FILTER, IconPaths.compile("M4 5h16l-6 7v6l-4 2v-8L4 5z"));
+        PATHS.put(Shape.RULER, IconPaths.compile("M4 16L16 4l4 4L8 20l-4-4zM8 12l2 2M11 9l2 2M14 6l2 2"));
     }
 
     private record Key(Shape shape, int pixels) {}

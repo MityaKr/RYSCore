@@ -1,5 +1,15 @@
 # История RYSCore
 
+## 1.12.0
+
+Ядро второго выпуска карты и привата (план `_audit/map`, этап Я4), только добавления; `map` и `world` предварительные (`@Preview`).
+
+- `map.MapApi`: режим полотна `mode(Mode)` (`Mode`, `ModeView`, `Surface`, `PanelView`, `MouseAction`), вкладка окна `tab(Tab)`, подсветка `highlight(Highlight)` (строитель: биомы, высоты, цвет), открыть на вкладке `openTab(id)` и в режиме `openMode(id, target)`. Реестры в ядре: `MapApi.modes()`, `tabs()`, `highlighted()`; порядок загрузки модов не важен.
+- `MapApi.Layer.search(query)` и результат `Hit` (строитель: заголовок, пояснение, цель, значок, предмет, голова, цвет).
+- `MapApi.Marker`: `panel(Supplier<Panel>)` правая панель чужой метки (`Panel`: заголовок, подзаголовок, текст, строки `Row`, врезка, до трёх кнопок `Action`) и `editor(Editor)` правка из окна карты (имя, место, удаление, «кто видит»).
+- `world.Labels`: подписи в мире от модов семьи. Источник `Labels.source(Source)`, метка `Label` (строитель: место, вид `Kind`, значок, предмет, голова, цвет, текст, `always`); рисует одна реализация (RYSMap), флаг `Labels.present()`; без неё мод рисует свои метки сам.
+- Значки карты из макетов: `PORTAL`, `CAVE`, `SUN`, `MOON`, `TELEPORT`, `BELL`, `TREE`, `CUBE`, `SERVER`, `UP`, `DOWN`, `SWORD`, `HEART`, `DOOR`, `FLAME`, `ROBOT`, `LINK`, `FILTER`, `RULER`.
+
 ## 1.11.0
 
 Всё ядро для первого выпуска RYSClaims и RYSMap (план `_audit/map`, этап Я1), только добавления.
