@@ -115,6 +115,24 @@ public final class Notices {
         return false;
     }
 
+    /**
+     * Клавиши ядра «Принять» и «Отказать» (1.14): верхнее видимое уведомление, у которого есть кнопка {@link Notice#accept}
+     * или {@link Notice#decline}, выполняет её и уходит.
+     * @return было ли такое уведомление
+     */
+    public static boolean answer(boolean yes) {
+        prune();
+        for (NoticeToast t : List.copyOf(ACTIVE)) {
+            if (!t.onScreen() || t.leaving()) continue;
+            Notice.Button b = yes ? t.notice.accept : t.notice.decline;
+            if (b == null) continue;
+            b.action().run();
+            t.dismiss();
+            return true;
+        }
+        return false;
+    }
+
     /** Общая настройка семьи «Звук уведомлений». */
     public static boolean soundOn() {
         return UiConfig.get().noticeSound;

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,8 @@ public final class Notice {
     public static final String QUESTS = "quests", TEAMS = "teams", SCOPE = "scope", PULSE = "pulse";
     /** Источники карты и привата (1.11). */
     public static final String MAP = "map", CLAIMS = "claims";
+    /** Источник окна «Сервер» (RYSHelm) и самого ядра: колесо, свои клавиши (1.14). */
+    public static final String HELM = "helm", CORE = "core";
 
     /** Вид карточки: обычная (квест), крупная (веха, глава, эпоха), строка (подтверждение), с кнопками (приглашение). */
     public enum Kind { CARD, BIG, ROW, BUTTONS, SUMMARY }
@@ -82,6 +85,8 @@ public final class Notice {
     @Nullable Supplier<String> key;
     @Nullable Runnable action;
     final List<Button> buttons = new ArrayList<>();
+    @Nullable Button accept, decline;
+    @Nullable DoubleSupplier progress;
     @Nullable Supplier<String> timer;
     long millis;
     @Nullable BooleanSupplier alive, hidden;
@@ -234,6 +239,34 @@ public final class Notice {
 
     public Notice button(String label, boolean primary, Runnable action) {
         this.buttons.add(new Button(label, primary, action));
+        return this;
+    }
+
+    /**
+     * Кнопка «Принять» (1.14): главная, с клавишей ядра справа от подписи ({@code Answers.ACCEPT}, умолчание Y).
+     * Клавиша отвечает на верхнее видимое уведомление с такой кнопкой, у любого мода.
+     */
+    public Notice accept(String label, Runnable action) {
+        Button b = new Button(label, true, action);
+        this.buttons.add(b);
+        this.accept = b;
+        return this;
+    }
+
+    /** Кнопка «Отказать» (1.14): обычная, с клавишей ядра ({@code Answers.DECLINE}, умолчание N). */
+    public Notice decline(String label, Runnable action) {
+        Button b = new Button(label, false, action);
+        this.buttons.add(b);
+        this.decline = b;
+        return this;
+    }
+
+    /**
+     * Полоса под названием обычной карточки (1.14): разогрев телепорта «Домой через 3 с», доля 0–1. Строка
+     * ({@link #lines}) встаёт под полосой: «урон отменит». Название тогда в одну строку.
+     */
+    public Notice progress(DoubleSupplier part) {
+        this.progress = part;
         return this;
     }
 

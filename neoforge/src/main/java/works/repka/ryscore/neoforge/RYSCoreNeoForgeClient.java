@@ -27,7 +27,17 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import org.lwjgl.glfw.GLFW;
 import works.repka.ryscore.RYSCore;
+import works.repka.ryscore.action.Actions;
+import works.repka.ryscore.action.Answers;
 import works.repka.ryscore.dock.Dock;
 import works.repka.ryscore.ui.Notices;
 import works.repka.ryscore.ui.UiScale;
@@ -47,6 +57,40 @@ public final class RYSCoreNeoForgeClient {
         modBus.addListener(RYSCoreNeoForgeClient::registerShaders);
         dockHooks();
         noticeHooks();
+        actionHooks(modBus);
+    }
+
+    /**
+     * Действия семьи (1.14): клавиши колеса, «Принять» и «Отказать» (только в мире), свои сочетания игрока на любое действие,
+     * имена модов для окна клавиш и модификаторы NeoForge у клавиш игры для проверки конфликтов.
+     */
+    private static void actionHooks(IEventBus modBus) {
+        for (KeyMapping k : new KeyMapping[] {Actions.WHEEL, Answers.ACCEPT, Answers.DECLINE}) k.setKeyConflictContext(KeyConflictContext.IN_GAME);
+        modBus.addListener((RegisterKeyMappingsEvent e) -> {
+            e.register(Actions.WHEEL);
+            e.register(Answers.ACCEPT);
+            e.register(Answers.DECLINE);
+        });
+        Actions.modNames(ns -> ModList.get().getModContainerById(ns).map(c -> c.getModInfo().getDisplayName()).orElse(ns));
+        Actions.keyModifiers(k -> switch (k.getKeyModifier()) {
+            case CONTROL -> GLFW.GLFW_MOD_CONTROL;
+            case SHIFT -> GLFW.GLFW_MOD_SHIFT;
+            case ALT -> GLFW.GLFW_MOD_ALT;
+            default -> 0;
+        });
+        IEventBus bus = NeoForge.EVENT_BUS;
+        bus.addListener((ClientTickEvent.Post e) -> {
+            Actions.clientTick();
+            Answers.clientTick();
+        });
+        bus.addListener((InputEvent.Key e) -> {
+            if (e.getAction() != GLFW.GLFW_PRESS || Minecraft.getInstance().screen != null) return;
+            Actions.keyPressed(InputConstants.getKey(e.getKey(), e.getScanCode()), e.getModifiers());
+        });
+        bus.addListener((InputEvent.MouseButton.Post e) -> {
+            if (e.getAction() != GLFW.GLFW_PRESS || Minecraft.getInstance().screen != null) return;
+            Actions.keyPressed(InputConstants.Type.MOUSE.getOrCreate(e.getButton()), e.getModifiers());
+        });
     }
 
     /**

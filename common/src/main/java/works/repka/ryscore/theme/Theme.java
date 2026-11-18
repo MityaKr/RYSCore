@@ -111,6 +111,23 @@ public final class Theme {
         fb("src.teams.fg", "chip.tag.fg");
         fb("src.pulse.fg", "state.bad");
         fb("coin", "medal.gold");
+        // источники уведомлений карты, привата, окна «Сервер» и ядра (1.14)
+        for (String src : new String[] {"map", "claims", "helm", "core"}) {
+            fb("src." + src + ".bg", "chip.fn.bg");
+            fb("src." + src + ".border", "panel.border");
+            fb("src." + src + ".fg", "chip.fn.fg");
+        }
+        // колесо быстрых действий поверх мира (1.14): тёмное в любой теме, как полотно карты; запасные из макета 01
+        fb("wheel.sector", "#e618181b");
+        fb("wheel.sector.off", "#d112141a");
+        fb("wheel.hover", "#f73c4252");
+        fb("wheel.hover.line", "#b7bdcb");
+        fb("wheel.line", "#343a48");
+        fb("wheel.center", "#f00f1116");
+        fb("wheel.fg", "#f7f8fb");
+        fb("wheel.muted", "#9aa1b2");
+        fb("wheel.tile", "#ff23272f");
+        fb("wheel.dim", "#66000000");
         String[] cats = {"#e4b23c", "#6fa8ff", "#6fcf8f", "#e58a6a", "#b78cf0", "#5fd0d0", "#d7d36a", "#f08fb8", "#9aa3b5", "#8fd18a", "#c9a37a", "#7f8ff0"};
         for (int i = 0; i < cats.length; i++) fb("cat." + (i + 1), cats[i]);
     }

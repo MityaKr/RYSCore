@@ -106,7 +106,49 @@ public final class Icons {
         /** Фильтр (1.12). */
         FILTER,
         /** Линейка, расстояние (1.12). */
-        RULER
+        RULER,
+        /** Назад, история перемещений (1.14). */
+        HISTORY,
+        /** Сундук Края (1.14). */
+        CHEST,
+        /** Корзина (1.14). */
+        TRASH,
+        /** Замок, закрыто (1.14). */
+        LOCK,
+        /** Часы, пауза (1.14). */
+        CLOCK,
+        /** Кровать (1.14). */
+        BED,
+        /** Чат, чат персонала (1.14). */
+        CHAT,
+        /** Заглушить (1.14). */
+        MUTE,
+        /** Бан (1.14). */
+        BAN,
+        /** Заморозить (1.14). */
+        SNOW,
+        /** Полёт (1.14). */
+        FEATHER,
+        /** Выгнать, выход (1.14). */
+        EXIT,
+        /** Игрок (1.14). */
+        USER,
+        /** Заметка (1.14). */
+        NOTE,
+        /** Колесо быстрых действий (1.14). */
+        WHEEL,
+        /** Накормить (1.14). */
+        FORK,
+        /** Скорость (1.14). */
+        SPEED,
+        /** Переставить (1.14). */
+        MOVE,
+        /** Случайное место (1.14). */
+        DICE,
+        /** Быстро, молния (1.14). */
+        BOLT,
+        /** Сведения, «i» в круге (1.14). */
+        INFO
     }
 
     /** Контуры значков из макетов (viewBox 24, обводка 2). */
@@ -163,6 +205,28 @@ public final class Icons {
         PATHS.put(Shape.ROBOT, IconPaths.compile("rect 5 8 14 11 2", "M12 8V4M9 13h.01M15 13h.01M9.5 16.5h5"));
         PATHS.put(Shape.LINK, IconPaths.compile("circle 6 12 2.5", "circle 18 6 2.5", "circle 18 18 2.5", "M8.2 11l7.6-3.8M8.2 13l7.6 3.8"));
         PATHS.put(Shape.FILTER, IconPaths.compile("M4 5h16l-6 7v6l-4 2v-8L4 5z"));
+        // колесо, клавиши и окно «Сервер» (1.14) из макетов _shared/_audit/essentials (e.py, book2 ui.py)
+        PATHS.put(Shape.HISTORY, IconPaths.compile("M4 12a8 8 0 1 0 2.5-5.8L4 8M4 4v4h4M12 8v4l3 2"));
+        PATHS.put(Shape.CHEST, IconPaths.compile("rect 4 7 16 12 2", "M4 12h16M12 11v3"));
+        PATHS.put(Shape.TRASH, IconPaths.compile("M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"));
+        PATHS.put(Shape.LOCK, IconPaths.compile("rect 5 11 14 9 2", "M8 11V8a4 4 0 0 1 8 0v3"));
+        PATHS.put(Shape.CLOCK, IconPaths.compile("circle 12 12 8.5", "M12 7.5V12l3 2"));
+        PATHS.put(Shape.BED, IconPaths.compile("M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5", "circle 7 11.5 1.5"));
+        PATHS.put(Shape.CHAT, IconPaths.compile("M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"));
+        PATHS.put(Shape.MUTE, IconPaths.compile("M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5l5 5M21 9.5l-5 5"));
+        PATHS.put(Shape.BAN, IconPaths.compile("circle 12 12 8.5", "M6 6l12 12"));
+        PATHS.put(Shape.SNOW, IconPaths.compile("M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 7l2.5-2.5M9.5 19.5L12 17l2.5 2.5"));
+        PATHS.put(Shape.FEATHER, IconPaths.compile("M20 4c-6 0-11 4-12 11l-3 5M8 15h6M10 11h7M20 4c0 7-4 11-10 11"));
+        PATHS.put(Shape.EXIT, IconPaths.compile("M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"));
+        PATHS.put(Shape.USER, IconPaths.compile("circle 12 8 3.5", "M5 20c0-4 3-6.5 7-6.5s7 2.5 7 6.5"));
+        PATHS.put(Shape.NOTE, IconPaths.compile("M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5"));
+        PATHS.put(Shape.WHEEL, IconPaths.compile("circle 12 12 8.5", "circle 12 12 3", "M12 3.5V9M12 15v5.5M3.5 12H9M15 12h5.5"));
+        PATHS.put(Shape.FORK, IconPaths.compile("M7 3v6a3 3 0 0 0 6 0V3M10 3v18M17 3v18M17 3c2 1 3 3 3 6s-1 4-3 4"));
+        PATHS.put(Shape.SPEED, IconPaths.compile("M4 16a8 8 0 1 1 16 0M12 16l4-5"));
+        PATHS.put(Shape.MOVE, IconPaths.compile("M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"));
+        PATHS.put(Shape.DICE, IconPaths.compile("rect 4 4 16 16 3", "M8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01"));
+        PATHS.put(Shape.BOLT, IconPaths.compile("M13 3L5 13h6l-1 8 8-10h-6l1-8z"));
+        PATHS.put(Shape.INFO, IconPaths.compile("circle 12 12 9", "M12 11v6M12 7.5h.01"));
         PATHS.put(Shape.RULER, IconPaths.compile("M4 16L16 4l4 4L8 20l-4-4zM8 12l2 2M11 9l2 2M14 6l2 2"));
     }
 

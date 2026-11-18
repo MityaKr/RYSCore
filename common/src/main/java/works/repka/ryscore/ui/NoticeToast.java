@@ -205,6 +205,10 @@ final class NoticeToast implements Toast {
         layout = switch (notice.kind) {
             case CARD -> {
                 float textW = W - 5 - 19 - 5.5f - 6 - reserve();
+                if (notice.progress != null) {
+                    yield new Layout(W, 37.5f, List.of(Draw.ellipsize(notice.title, textW, 13, Weight.SEMIBOLD)),
+                        fit(notice.lines, textW, 11.5f, Weight.REGULAR), List.of());
+                }
                 List<String> title = Draw.wrapLabel(notice.title, textW, 13, Weight.SEMIBOLD, 2);
                 yield new Layout(W, title.size() > 1 ? 37.5f : 29, title, fit(notice.lines, textW, 11.5f, Weight.REGULAR), List.of());
             }
@@ -400,6 +404,17 @@ final class NoticeToast implements Toast {
         slot(g, t, sx, sy, slot, 0);
         icon(g, sx + 2.5f, sy + 2.5f, 14);
         float tx = sx + slot + 5.5f;
+        if (notice.progress != null) {
+            // разогрев: название, полоса, строка «урон отменит»
+            float top = (l.h - 8.5f - 6f - 7.5f) / 2f, barW = l.w - tx - 6 - reserve();
+            Draw.label(g, l.title.getFirst(), tx, top + 4.25f, 13, Weight.SEMIBOLD, primary(t));
+            float part = (float) Math.max(0, Math.min(1, notice.progress.getAsDouble()));
+            Draw.round(g, tx, top + 10.5f, barW, 2, 1, t.c("hud.border"));
+            if (part > 0) Draw.round(g, tx, top + 10.5f, Math.max(2, barW * part), 2, 1, primary(t));
+            Draw.label(g, l.line, tx, top + 14.5f + 3.75f, 11.5f, Weight.REGULAR, notice.lineBright ? secondary(t) : muted(t));
+            keyOrCross(g, t, l.w - 6, top + 4.25f, hover);
+            return;
+        }
         float block = l.title.size() * 8.5f + 7.5f, top = (l.h - block) / 2f;
         for (int i = 0; i < l.title.size(); i++) {
             Draw.label(g, l.title.get(i), tx, top + 4.25f + i * 8.5f, 13, Weight.SEMIBOLD, primary(t));
@@ -534,7 +549,10 @@ final class NoticeToast implements Toast {
         float by = hy + head + 4.5f, bh = 12, pen = 5;
         float r = t.beveled() ? 0 : t.r("button.radius") > 15 ? 6 : 3.5f;
         for (Notice.Button b : notice.buttons) {
-            float w = Draw.labelWidth(b.label(), 12, Weight.MEDIUM) + 10;
+            String keyLabel = b == notice.accept ? works.repka.ryscore.action.Answers.acceptKey()
+                : b == notice.decline ? works.repka.ryscore.action.Answers.declineKey() : "";
+            float keyW = keyLabel.isEmpty() ? 0 : Draw.labelWidth(keyLabel, 10.5f, Weight.SEMIBOLD) + 5;
+            float w = Draw.labelWidth(b.label(), 12, Weight.MEDIUM) + 10 + (keyW > 0 ? keyW + 3 : 0);
             if (t.beveled()) {
                 Draw.bevel(g, pen, by, w, bh, b.primary() ? t.c("accent") : t.c("button.bg"), t.c("panel.bevel.light"), t.c("button.border"), 1f, false);
             } else if (b.primary()) {
@@ -544,6 +562,13 @@ final class NoticeToast implements Toast {
             }
             int fg = b.primary() ? t.c("accent.text") : t.beveled() ? t.c("button.fg") : primary(t);
             Draw.label(g, b.label(), pen + 5, by + bh / 2f, 12, Weight.MEDIUM, fg);
+            if (keyW > 0) {
+                // клавиша ответа на кнопке: «Принять [Y]», плашка темнее кнопки
+                float kx = pen + w - 3 - keyW, kh = bh - 4;
+                int kb = b.primary() ? Draw.alpha(0xFF000000, 0.78f) : t.c("hud.border");
+                Draw.round(g, kx, by + 2, keyW, kh, 2, kb);
+                Draw.label(g, keyLabel, kx + 2.5f, by + bh / 2f, 10.5f, Weight.SEMIBOLD, b.primary() ? 0xFFFFFFFF : muted(t));
+            }
             buttonHits.add(new float[] {pen, by, w, bh});
             pen += w + 3;
         }
