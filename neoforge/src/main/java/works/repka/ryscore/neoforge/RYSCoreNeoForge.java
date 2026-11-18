@@ -19,7 +19,14 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import net.neoforged.neoforge.server.permission.PermissionAPI;
+import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
+import net.neoforged.neoforge.server.permission.nodes.PermissionNode;
+import net.neoforged.neoforge.server.permission.nodes.PermissionTypes;
 import works.repka.ryscore.RYSCore;
+import works.repka.ryscore.perm.Perms;
 import works.repka.ryscore.migrate.Migrations;
 
 /**
@@ -42,6 +49,34 @@ public final class RYSCoreNeoForge {
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent e) -> RYSCore.server(null));
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> commands(e.getDispatcher()));
+        permissions();
+    }
+
+    /** Узлы прав NeoForge для {@link Perms}: имя узла {@code modid.имя}, умолчание по таблице ролей RYSHelm или роли узла. */
+    private static final Map<String, PermissionNode<Boolean>> NODES = new ConcurrentHashMap<>();
+
+    private static void permissions() {
+        NeoForge.EVENT_BUS.addListener((PermissionGatherEvent.Nodes e) -> {
+            NODES.clear();
+            for (Perms.Node node : Perms.nodes()) {
+                PermissionNode<Boolean> pn = new PermissionNode<>(node.modid(), node.name(), PermissionTypes.BOOLEAN, (player, id, ctx) -> {
+                    MinecraftServer server = player != null ? player.server : RYSCore.server();
+                    return server != null && Perms.resolveDefault(server, id, node);
+                });
+                pn.setInformation(node.label(), Component.literal(node.defaultRole()));
+                NODES.put(node.id(), pn);
+                e.addNodes(pn);
+            }
+        });
+        Perms.checker((player, id, node) -> {
+            PermissionNode<Boolean> pn = NODES.get(node.id());
+            if (pn == null || !PermissionAPI.getRegisteredNodes().contains(pn)) return null;
+            try {
+                return player != null ? PermissionAPI.getPermission(player, pn) : PermissionAPI.getOfflinePermission(id, pn);
+            } catch (RuntimeException ex) {
+                return null;
+            }
+        });
     }
 
     private static final SuggestionProvider<CommandSourceStack> STEPS = (c, b) ->
