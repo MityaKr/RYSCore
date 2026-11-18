@@ -11,6 +11,19 @@ neoForge {
     }
 }
 
+// проверки видят игру и её библиотеки (Gson, slf4j)
+neoForge.addModdingDependenciesTo(sourceSets.test)
+
 dependencies {
     compileOnly 'org.jetbrains:annotations:26.0.1'
+
+    // проверки без игры: реестр переезда, файл отметок, читатель SNBT
+    testCompileOnly 'org.jetbrains:annotations:26.0.1'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }

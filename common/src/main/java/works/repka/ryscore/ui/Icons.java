@@ -52,7 +52,23 @@ public final class Icons {
         /** Статистика, «где застревают». */
         CHART,
         /** Гайд. */
-        BOOK
+        BOOK,
+        /** Дом, база (1.11). */
+        HOME,
+        /** Слои карты (1.11). */
+        LAYERS,
+        /** Приват, защита (1.11). */
+        SHIELD,
+        /** Выделение чанков, кирка (1.11). */
+        PICK,
+        /** Направление, стрелка игрока на карте (1.11). */
+        NAV,
+        /** Копировать координаты (1.11). */
+        COPY,
+        /** Прогрузка чанка (1.11). */
+        ANCHOR,
+        /** Ещё действия, меню (1.11). */
+        DOTS
     }
 
     /** Контуры значков из макетов (viewBox 24, обводка 2). */
@@ -81,6 +97,15 @@ public final class Icons {
         PATHS.put(Shape.SKULL, IconPaths.compile("M5 11a7 7 0 0 1 14 0c0 2.5-1 4-2.5 5v3h-9v-3C6 15 5 13.5 5 11zM9.5 11.5h.01M14.5 11.5h.01M10.5 19v-2M13.5 19v-2"));
         PATHS.put(Shape.CHART, IconPaths.compile("M5 20V10M12 20V4M19 20v-7"));
         PATHS.put(Shape.BOOK, IconPaths.compile("M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4zM5 17a3 3 0 0 1 3-3h11"));
+        // карта и приват (1.11), контуры из макетов _audit/map
+        PATHS.put(Shape.HOME, IconPaths.compile("M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"));
+        PATHS.put(Shape.LAYERS, IconPaths.compile("M12 3l9 5-9 5-9-5 9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5"));
+        PATHS.put(Shape.SHIELD, IconPaths.compile("M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"));
+        PATHS.put(Shape.PICK, IconPaths.compile("M5 5c5-2 10-1 14 3M12 6.5L4 20M12 6.5l1.5 1.5"));
+        PATHS.put(Shape.NAV, IconPaths.compile("M12 3l7 17-7-4-7 4 7-17z"));
+        PATHS.put(Shape.COPY, IconPaths.compile("rect 8 8 12 12 2", "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"));
+        PATHS.put(Shape.ANCHOR, IconPaths.compile("circle 12 5.5 2", "M12 7.5V20M5 13a7 7 0 0 0 14 0M9 11h6"));
+        PATHS.put(Shape.DOTS, IconPaths.compile("M6 12h.01M12 12h.01M18 12h.01"));
     }
 
     private record Key(Shape shape, int pixels) {}

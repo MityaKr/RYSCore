@@ -24,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 public final class Notice {
     /** Источники семьи: от них зависят плашка строки ({@code src.<источник>.bg}, {@code .fg}) и предел мест. */
     public static final String QUESTS = "quests", TEAMS = "teams", SCOPE = "scope", PULSE = "pulse";
+    /** Источники карты и привата (1.11). */
+    public static final String MAP = "map", CLAIMS = "claims";
 
     /** Вид карточки: обычная (квест), крупная (веха, глава, эпоха), строка (подтверждение), с кнопками (приглашение). */
     public enum Kind { CARD, BIG, ROW, BUTTONS, SUMMARY }

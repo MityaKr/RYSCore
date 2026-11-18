@@ -5,3 +5,4 @@ repo/
 *.iml
 .idea/
 _stale/
+logs/

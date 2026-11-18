@@ -94,6 +94,12 @@ public final class Theme {
         fb("map.node.done", "#6fcf8f");
         fb("map.node.open", "#f7f8fb");
         fb("map.node.locked", "#5f6678");
+        // карта и приват (1.11): сетка чанков, выделение привата, отказ, неизвестный блок, рамка миникарты
+        fb("map.grid", "#570f1116");
+        fb("map.draft", "#e4b23c");
+        fb("map.deny", "state.bad");
+        fb("map.unknown", "map.bg");
+        fb("hud.map.border", "hud.border");
         fb("medal.bronze", "#c8794a");
         fb("medal.silver", "#c9cfdd");
         fb("medal.gold", "#c79a12");

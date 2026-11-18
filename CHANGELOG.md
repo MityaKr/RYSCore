@@ -1,5 +1,20 @@
 # История RYSCore
 
+## 1.11.0
+
+Всё ядро для первого выпуска RYSClaims и RYSMap (план `_audit/map`, этап Я1), только добавления.
+
+- `team.TeamsApi`: `name`, `color` (RGB), `roleOf` (константы `LEADER`, `OFFICER`, `MEMBER`, `GUEST`), `allies`, `leader`, `teams`, `registerPermission(id, label, defaultRoles)` с реестром в ядре (`TeamsApi.permissions()`, `permission(id)`, класс `ModPermission`); слушатель: `onRoleChanged`, `onAlliesChanged`, `onRenamed` (имя, цвет или значок). Соло: ник из кэша профилей, цвет по UUID из двенадцати цветов семьи, лидер сам игрок.
+- `claims.ClaimsApi` (сервер, предварительный): `present`, `ownerAt`, `can`, `canMachine`, `forceLoaded`, `claimed`, `limit`, `addBonus`, `addPlayerBonus`, `Action` (`BUILD`, `OPEN`, `USE`, `ENTITY`), слушатель `onClaimed`, `onReleased`. Без RYSClaims земли нет и всё разрешено.
+- `map.MapApi` (клиент, предварительный, урезанный): `present`, `layer`, `menu`, `status`, `open`, `track`, `drawTiles`. Слои, пункты меню и строки статуса хранит ядро (`MapApi.layers()`, `menus()`, `statuses()`), порядок загрузки модов не важен. `Marker`, `AreaLabel`, `MenuItem`, `Target` собираются строителями, `Status.of`; записью только `Spot`. `Layer`, `Areas`, `AreaSink`, `AreaStyle`, `Kind`. Режимы, вкладки, панель метки, правка, поиск и подсветка придут позже.
+- Аннотация `Preview`: пакеты `claims` и `map` предварительные до 1.0 RYSClaims и RYSMap.
+- `migrate.Migrations`: реестр шагов переезда с FTB (`Step`: id, порядок, сторона, `needed`, `run`, `undo`, `backup`), флаг сборки `config/ryscore/migrate.json`, копия `world/rys/backup/ftb-<время>/` один раз, отметки `world/rys/migrate.json` (у клиента в папке, которую дал мод), отчёт блоком `[rys-migrate]` в лог и в `world/rys/migrate-report.txt`, сбой шага не ставит отметку и не останавливает следующие, данные шага для продолжения (`Context.data`). Серверные шаги идут в `ServerStartedEvent` с самым низким приоритетом; клиентские запускает мод через `runClient`. Команды `/rys migrate status | run <шаг> | undo <шаг>` (уровень 4).
+- `migrate.Snbt`: читатель вольного SNBT FTB (запятые необязательны, ключи-UUID без кавычек, комментарии `#`, типизированные массивы), помощники `object`, `array`, `string`, `bool`, `integer`, `longValue`, `uuid`, ошибка `SyntaxError` с файлом, строкой и столбцом.
+- `RYSCore.server()`: запущенный сервер. Новая точка входа `neoforge.RYSCoreNeoForge` на обеих сторонах.
+- Токены с запасными: `map.grid` (`#570f1116`), `map.draft` (`#e4b23c`), `map.deny` (`state.bad`), `map.unknown` (`map.bg`), `hud.map.border` (`hud.border`).
+- `Notice.MAP`, `Notice.CLAIMS`; значки `HOME`, `LAYERS`, `SHIELD`, `PICK`, `NAV`, `COPY`, `ANCHOR`, `DOTS` из макетов карты.
+- Проверки JUnit в `common`: реестр шагов, отметки, копия, читатель SNBT.
+
 ## 1.10.0
 
 Сведения о предмете от модов семьи (план `_audit/ryscope-quests`), только добавления.
