@@ -2,7 +2,7 @@
 
 Собрана `_shared/tools/make-map.py` 2026-11-18. Руками не править: после структурных правок пересобрать.
 
-Java: 57 файлов, 11338 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
+Java: 57 файлов, 11354 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
 Читать сначала: `CLAUDE.md`, `README.md`.
 
 ## Точки входа
@@ -11,11 +11,11 @@ Java: 57 файлов, 11338 строк. Модули gradle: `common`. Пере
 - миксины: `neoforge/src/main/resources/ryscore.mixins.json`
 
 ## Папки
-- `common/` — 417 файлов
+- `common/` — 401 файлов
 - `docs/` — 1 файлов
 - `gradle/` — 2 файлов
-- `neoforge/` — 334 файлов
-- `repo/` — 365 файлов
+- `neoforge/` — 314 файлов
+- `repo/` — 380 файлов
 
 ## `common/src/main/java` — пакет `works.repka.ryscore`
 
@@ -35,7 +35,7 @@ Java: 57 файлов, 11338 строк. Модули gradle: `common`. Пере
 - `ItemLinks` 378 — Сведения о предмете от модов семьи (1.10): мод рассказывает просмотрщику, где предмет встречается у него (книга квестов: сделки магазина, награды, задачи).
 
 **map** (1)
-- `MapApi` 991 — Карта для модов семьи (1.11), только на клиенте, из главного потока.
+- `MapApi` 997 — Карта для модов семьи (1.11), только на клиенте, из главного потока.
 
 **migrate** (2)
 - `Migrations` 850 — Переезд мира с FTB (1.11): реестр шагов, флаг сборки, копия, отметка «сделано» и отчёт.
@@ -57,7 +57,7 @@ Java: 57 файлов, 11338 строк. Модули gradle: `common`. Пере
 - `ThemeManager` 152 — Темы читаются из ресурспаков: assets//ryscore_themes/.json.
 
 **ui** (27)
-- `Anchors` 74 — Где стоят постоянные элементы семьи на игровом экране и какой угол занят картой.
+- `Anchors` 84 — Где стоят постоянные элементы семьи на игровом экране и какой угол занят картой.
 - `Atlas` 133 — Общий атлас кора: глифы шрифта, заготовки фигур, значки и ячейки лежат на одних страницах.
 - `Batch` 194 — Пакетная отрисовка кора.
 - `BatchTarget` 7 — Добавляется перехватом кора к net.minecraft.client.gui.GuiGraphics: есть ли у игры несброшенная отрисовка.

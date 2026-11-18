@@ -68,6 +68,7 @@
     "hud.border": "#343a48",
     "link": "#8fb4ff",
     "map.bg": "#0f1116",
+    "map.unknown": "#474b56",
     "map.label.bg": "#0f1116",
     "map.label.bg.alpha": 0.84,
     "map.label.fg": "#f7f8fb",

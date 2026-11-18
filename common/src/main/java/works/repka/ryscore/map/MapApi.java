@@ -85,6 +85,12 @@ public interface MapApi {
     /** Открыть окно карты на месте цели. */
     default void open(Target target) {}
 
+    /**
+     * Окно новой точки карты с готовыми данными: кнопка «Сохранить точкой» у цели квеста (макет {@code 19}), ссылка
+     * из чата. Игрок сам подтверждает имя и вид. Без RYSMap ничего не делает. С 1.13.
+     */
+    default void newPoint(Target target) {}
+
     /** Открыть окно карты на вкладке ({@link #tab}); неизвестная вкладка открывает карту. С 1.12. */
     default void openTab(ResourceLocation tab) {}
 

@@ -40,6 +40,16 @@ public final class Anchors {
         return UiConfig.get().mapCorner;
     }
 
+    /**
+     * Угол зоны карты (1.13): карта сообщает угол, который выбрал игрок, и соседи (закреплённые квесты, карточка
+     * команды, приглашения) подвигаются по нему. Пишется в {@code config/ryscore/ui.json}.
+     */
+    public static void setMapCorner(Corner corner) {
+        if (UiConfig.get().mapCorner == corner) return;
+        UiConfig.get().mapCorner = java.util.Objects.requireNonNull(corner);
+        UiConfig.save();
+    }
+
     /** Высота занятой картой зоны в единицах интерфейса. */
     public static int mapHeight() {
         return (int) Math.ceil(UiScale.height() * UiConfig.get().mapPercent / 100.0);
