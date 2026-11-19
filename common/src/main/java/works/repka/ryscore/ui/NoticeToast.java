@@ -198,6 +198,9 @@ final class NoticeToast implements Toast {
 
     // --- раскладка ---
 
+    /** Отсчёт в шапке, а не в ряду кнопок; считается вместе с раскладкой. */
+    private boolean timerTop;
+
     private record Layout(float w, float h, List<String> title, String line, List<String> rowLines) {}
 
     private Layout layout() {
@@ -236,12 +239,41 @@ final class NoticeToast implements Toast {
                 yield new Layout(W, Math.max(18, 7 + rows.size() * 8), List.of(), "", rows);
             }
             case BUTTONS -> {
-                float textW = W - 5 - 19 - 5.5f - 6;
+                timerTop = timerUp();
+                float textW = W - 5 - 19 - 5.5f - 6 - (timerTop ? timerW() + 4 : 0);
                 yield new Layout(W, 45.5f, List.of(Draw.ellipsize(notice.title, textW, 13, Weight.SEMIBOLD)),
                     fit(notice.lines, textW, 11.5f, Weight.REGULAR), List.of());
             }
         };
         return layout;
+    }
+
+    /** Ширина места под отсчёт: по образцу «00:00», чтобы раскладка не прыгала каждую секунду. */
+    private static float timerW() {
+        return Draw.labelWidth("00:00", 11, Weight.MEDIUM);
+    }
+
+    /** Ширина кнопки с подписью и плашкой клавиши ответа. */
+    private float buttonWidth(Notice.Button b) {
+        String keyLabel = keyLabel(b);
+        float keyW = keyLabel.isEmpty() ? 0 : Draw.labelWidth(keyLabel, 10.5f, Weight.SEMIBOLD) + 5;
+        return Draw.labelWidth(b.label(), 12, Weight.MEDIUM) + 10 + (keyW > 0 ? keyW + 3 : 0);
+    }
+
+    private String keyLabel(Notice.Button b) {
+        return b == notice.accept ? works.repka.ryscore.action.Answers.acceptKey()
+            : b == notice.decline ? works.repka.ryscore.action.Answers.declineKey() : "";
+    }
+
+    /**
+     * Отсчёт не помещается справа от кнопок: встаёт в шапку справа от названия (1.15.1, приглашение RYSTeams: три
+     * кнопки с плашками Y и N, «4:57» ложился на плашку N).
+     */
+    private boolean timerUp() {
+        if (notice.timer == null) return false;
+        float pen = 5;
+        for (Notice.Button b : notice.buttons) pen += buttonWidth(b) + 3;
+        return pen + 1 + timerW() > W - 6;
     }
 
     /** Место справа под клавишу или крестик: одно и то же, чтобы перенос названия не менялся при наведении. */
@@ -554,10 +586,9 @@ final class NoticeToast implements Toast {
         float by = hy + head + 4.5f, bh = 12, pen = 5;
         float r = t.beveled() ? 0 : t.r("button.radius") > 15 ? 6 : 3.5f;
         for (Notice.Button b : notice.buttons) {
-            String keyLabel = b == notice.accept ? works.repka.ryscore.action.Answers.acceptKey()
-                : b == notice.decline ? works.repka.ryscore.action.Answers.declineKey() : "";
+            String keyLabel = keyLabel(b);
             float keyW = keyLabel.isEmpty() ? 0 : Draw.labelWidth(keyLabel, 10.5f, Weight.SEMIBOLD) + 5;
-            float w = Draw.labelWidth(b.label(), 12, Weight.MEDIUM) + 10 + (keyW > 0 ? keyW + 3 : 0);
+            float w = buttonWidth(b);
             if (t.beveled()) {
                 Draw.bevel(g, pen, by, w, bh, b.primary() ? t.c("accent") : t.c("button.bg"), t.c("panel.bevel.light"), t.c("button.border"), 1f, false);
             } else if (b.primary()) {
@@ -579,7 +610,8 @@ final class NoticeToast implements Toast {
         }
         if (notice.timer != null) {
             String timer = notice.timer.get();
-            Draw.label(g, timer, l.w - 6 - Draw.labelWidth(timer, 11, Weight.MEDIUM), by + bh / 2f, 11, Weight.MEDIUM,
+            float timerY = timerTop ? top + 4.25f : by + bh / 2f;
+            Draw.label(g, timer, l.w - 6 - Draw.labelWidth(timer, 11, Weight.MEDIUM), timerY, 11, Weight.MEDIUM,
                 t.beveled() ? t.c("hud.muted") : t.c("text.dim"));
         }
     }
