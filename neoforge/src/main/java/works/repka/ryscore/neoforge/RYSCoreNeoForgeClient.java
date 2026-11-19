@@ -86,10 +86,10 @@ public final class RYSCoreNeoForgeClient {
         });
         Actions.keyContexts((a, b) -> a.getKeyConflictContext().conflicts(b.getKeyConflictContext())
             || b.getKeyConflictContext().conflicts(a.getKeyConflictContext()));
-        // плитка «Ё» на панели семьи: окно «Клавиши» (1.15); в колесе её не дублируем
+        // плитка «Клавиши» на панели семьи: окно «Клавиши» (1.15, значок клавиш с 1.15.5); в колесе её не дублируем
         DockButton.builder(KEYS_TILE).label(() -> Component.translatable("ryscore.dock.keys"))
             .description(() -> Component.translatable("ryscore.dock.keys.desc", Binding.keyLabel(Binding.keyOf(Actions.WHEEL))))
-            .tile(0xFF4E9A6A).icon(Icons.Shape.LETTER_YO).order(90)
+            .tile(0xFF4E9A6A).icon(Icons.Shape.KEYCAPS).order(90)
             .action(() -> Actions.openKeys(Minecraft.getInstance().screen)).register();
         Actions.coversDock(KEYS_TILE);
         IEventBus bus = NeoForge.EVENT_BUS;

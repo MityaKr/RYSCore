@@ -36,7 +36,7 @@ final class KeysIntro {
         if (!GATE.tick(mc.player != null && mc.level != null, mc.screen != null)) return;
         String wheel = Actions.WHEEL.isUnbound() ? "—" : Binding.keyLabel(Binding.keyOf(Actions.WHEEL));
         String yes = Answers.acceptKey(), no = Answers.declineKey();
-        Notice.buttons(Notice.CORE, "keys_intro").icon(Icons.Shape.LETTER_YO)
+        Notice.buttons(Notice.CORE, "keys_intro").icon(Icons.Shape.KEYCAPS)
             .title(Component.translatable("ryscore.intro.keys.title").getString())
             .lines(Component.translatable("ryscore.intro.keys.long", wheel, yes, no).getString(),
                 Component.translatable("ryscore.intro.keys.short", wheel).getString())
