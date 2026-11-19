@@ -148,7 +148,9 @@ public final class Icons {
         /** Быстро, молния (1.14). */
         BOLT,
         /** Сведения, «i» в круге (1.14). */
-        INFO
+        INFO,
+        /** Буква «Ё»: клавиша колеса, окно «Клавиши» (1.15). */
+        LETTER_YO
     }
 
     /** Контуры значков из макетов (viewBox 24, обводка 2). */
@@ -227,6 +229,7 @@ public final class Icons {
         PATHS.put(Shape.DICE, IconPaths.compile("rect 4 4 16 16 3", "M8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01"));
         PATHS.put(Shape.BOLT, IconPaths.compile("M13 3L5 13h6l-1 8 8-10h-6l1-8z"));
         PATHS.put(Shape.INFO, IconPaths.compile("circle 12 12 9", "M12 11v6M12 7.5h.01"));
+        PATHS.put(Shape.LETTER_YO, IconPaths.compile("M16 6.5H9v13h7M9 13h6M10.5 3h.01M14.5 3h.01"));
         PATHS.put(Shape.RULER, IconPaths.compile("M4 16L16 4l4 4L8 20l-4-4zM8 12l2 2M11 9l2 2M14 6l2 2"));
     }
 

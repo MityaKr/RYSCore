@@ -38,6 +38,10 @@ import org.lwjgl.glfw.GLFW;
 import works.repka.ryscore.RYSCore;
 import works.repka.ryscore.action.Actions;
 import works.repka.ryscore.action.Answers;
+import works.repka.ryscore.action.Binding;
+import works.repka.ryscore.dock.DockButton;
+import works.repka.ryscore.ui.Icons;
+import net.minecraft.network.chat.Component;
 import works.repka.ryscore.dock.Dock;
 import works.repka.ryscore.ui.Notices;
 import works.repka.ryscore.ui.UiScale;
@@ -48,6 +52,8 @@ import works.repka.ryscore.ui.Batch;
 /** Клиентская часть кора: темы перечитываются вместе с ресурсами, модам семьи делать ничего не нужно. */
 @Mod(value = RYSCore.MOD_ID, dist = Dist.CLIENT)
 public final class RYSCoreNeoForgeClient {
+    private static final String KEYS_TILE = "ryscore_keys";
+
     public RYSCoreNeoForgeClient(IEventBus modBus) {
         modBus.addListener((RegisterClientReloadListenersEvent event) ->
             event.registerReloadListener((ResourceManagerReloadListener) ThemeManager::reload));
@@ -78,6 +84,14 @@ public final class RYSCoreNeoForgeClient {
             case ALT -> GLFW.GLFW_MOD_ALT;
             default -> 0;
         });
+        Actions.keyContexts((a, b) -> a.getKeyConflictContext().conflicts(b.getKeyConflictContext())
+            || b.getKeyConflictContext().conflicts(a.getKeyConflictContext()));
+        // плитка «Ё» на панели семьи: окно «Клавиши» (1.15); в колесе её не дублируем
+        DockButton.builder(KEYS_TILE).label(() -> Component.translatable("ryscore.dock.keys"))
+            .description(() -> Component.translatable("ryscore.dock.keys.desc", Binding.keyLabel(Binding.keyOf(Actions.WHEEL))))
+            .tile(0xFF4E9A6A).icon(Icons.Shape.LETTER_YO).order(90)
+            .action(() -> Actions.openKeys(Minecraft.getInstance().screen)).register();
+        Actions.coversDock(KEYS_TILE);
         IEventBus bus = NeoForge.EVENT_BUS;
         bus.addListener((ClientTickEvent.Post e) -> {
             Actions.clientTick();

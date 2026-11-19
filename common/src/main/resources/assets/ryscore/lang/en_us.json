@@ -60,5 +60,11 @@
   "ryscore.keys.mode.click": "Click only",
   "ryscore.keys.free": "Free keys",
   "ryscore.keys.free_hint": "not bound to anything",
-  "ryscore.keys.note": "Drag an action onto a sector. Keys work in the world when no game window is open. With Ctrl, Shift or Alt a key does not clash with the same letter without them."
+  "ryscore.keys.note": "Drag an action onto a sector. Keys work in the world when no game window is open. With Ctrl, Shift or Alt a key does not clash with the same letter without them.",
+  "ryscore.keys.clashes": "Conflicts · %s",
+  "ryscore.keys.clashes_head": "Conflicts",
+  "ryscore.keys.clashes_hint": "one press goes to all",
+  "ryscore.keys.unbind": "Unbind ours",
+  "ryscore.dock.keys": "Keys",
+  "ryscore.dock.keys.desc": "Wheel on %s, own keys and conflicts"
 }

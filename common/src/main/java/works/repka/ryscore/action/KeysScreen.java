@@ -38,6 +38,8 @@ import works.repka.ryscore.ui.Type.Weight;
 final class KeysScreen extends ScaledScreen {
     private static final float ROW_H = 20, GROUP_H = 12, WR = 61, WIR = 24, GAP = 1.6f;
     private static final ResourceLocation WHEEL_KEY = ResourceLocation.fromNamespaceAndPath("ryscore", "wheel_key");
+    /** Фильтр «Конфликты»: id группы, которой нет у действий. */
+    private static final String CLASHES = "#clashes";
 
     private final @Nullable Screen parent;
     private final Kit.Hits hits = new Kit.Hits();
@@ -58,6 +60,8 @@ final class KeysScreen extends ScaledScreen {
     private @Nullable Action pressed;
     private float wheelCx, wheelCy;
     private @Nullable List<String> tooltip;
+    private List<Actions.Clash> clashes = List.of();
+    private long clashesAt;
 
     KeysScreen(@Nullable Screen parent) {
         super(Component.translatable("ryscore.keys.title"));
@@ -299,11 +303,24 @@ final class KeysScreen extends ScaledScreen {
             groups.putIfAbsent(a.group().id(), a.group());
             counts.merge(a.group().id(), 1, Integer::sum);
         }
+        // конфликты наших клавиш с чужими: пересчёт раз в полсекунды, клавиш игры сотни
+        long now = System.currentTimeMillis();
+        if (now - clashesAt > 500) {
+            clashes = Actions.clashes();
+            clashesAt = now;
+        }
+        if (clashes.isEmpty() && CLASHES.equals(group)) group = null;
         int px = x;
         px += Kit.pill(g, t, hits, px, y, Component.translatable("ryscore.keys.all", all.size()).getString(), group == null, mx, my, () -> {
             group = null;
             scroll.reset();
         }) + 3;
+        if (!clashes.isEmpty()) {
+            px += Kit.pill(g, t, hits, px, y, Component.translatable("ryscore.keys.clashes", clashes.size()).getString(), CLASHES.equals(group), mx, my, () -> {
+                group = CLASHES.equals(group) ? null : CLASHES;
+                scroll.reset();
+            }) + 3;
+        }
         for (var e : groups.entrySet()) {
             String label = e.getValue().label().getString() + " · " + counts.get(e.getKey());
             int pw = (int) Math.ceil(Draw.labelWidth(label, 12.5f, Weight.MEDIUM)) + 12;
@@ -318,8 +335,11 @@ final class KeysScreen extends ScaledScreen {
         int ly = y + 19, lh = h - 19;
         t.card(g, x, ly, w, lh);
         List<Action> shown = new ArrayList<>();
-        for (Action a : all) if (matches(a)) shown.add(a);
-        float content = 0;
+        boolean onlyClashes = CLASHES.equals(group);
+        if (!onlyClashes) for (Action a : all) if (matches(a)) shown.add(a);
+        // блок «Конфликты» сверху: во «Всех» без поиска и в своём фильтре
+        List<Actions.Clash> clashRows = (onlyClashes || group == null && query.isEmpty()) ? clashes : List.of();
+        float content = clashRows.isEmpty() ? 0 : GROUP_H + clashRows.size() * ROW_H;
         String last = null;
         for (Action a : shown) {
             if (!a.group().id().equals(last)) {
@@ -334,6 +354,18 @@ final class KeysScreen extends ScaledScreen {
         Draw.scissor(g, x, top, x + w, bottom);
         hits.clip(top, bottom);
         float ry = ly + 3 - off;
+        if (!clashRows.isEmpty()) {
+            if (ry + GROUP_H > top && ry < bottom) {
+                Kit.capsColored(g, Component.translatable("ryscore.keys.clashes_head").getString(), x + 8, ry + GROUP_H / 2f + 1, 10.5f, 0.42f, t.c("state.warn"));
+                String hint = Component.translatable("ryscore.keys.clashes_hint").getString();
+                Draw.label(g, hint, x + w - 8 - Draw.labelWidth(hint, 11, Weight.REGULAR), ry + GROUP_H / 2f + 1, 11, Weight.REGULAR, t.c("text.dim"));
+            }
+            ry += GROUP_H;
+            for (Actions.Clash c : clashRows) {
+                if (ry + ROW_H > top && ry < bottom) clashRow(g, t, c, x + 3, ry, w - 6, mx, my);
+                ry += ROW_H;
+            }
+        }
         last = null;
         for (Action a : shown) {
             if (!a.group().id().equals(last)) {
@@ -350,7 +382,7 @@ final class KeysScreen extends ScaledScreen {
         }
         hits.unclip();
         g.disableScissor();
-        if (shown.isEmpty()) {
+        if (shown.isEmpty() && clashRows.isEmpty()) {
             String none = Component.translatable("ryscore.keys.nothing").getString();
             Draw.label(g, none, x + 10, ly + 12, 12.5f, Weight.REGULAR, t.c("text.muted"));
             if (!query.isEmpty() || group != null) {
@@ -363,6 +395,35 @@ final class KeysScreen extends ScaledScreen {
                 });
             }
         }
+    }
+
+    /** Строка конфликта: наша клавиша, у кого ещё она, «Снять нашу». */
+    private void clashRow(GuiGraphics g, Theme t, Actions.Clash c, float x, float y, float w, int mx, int my) {
+        boolean hot = Kit.over(mx, my, (int) x, (int) y, (int) w, (int) ROW_H);
+        if (hot) Draw.round(g, x, y + 0.5f, w, ROW_H - 1, 4, Draw.alpha(t.c("row.selected.bg"), 0.5f));
+        float cy = y + ROW_H / 2f;
+        Draw.roundBox(g, x + 5, cy - 7, 14, 14, 3.5f, t.c("slot.bg"), t.c("card.border"));
+        Icons.draw(g, Icons.Shape.WARN, x + 8, cy - 4, 8, t.c("state.warn"));
+        String unbind = Component.translatable("ryscore.keys.unbind").getString();
+        int bw = (int) Kit.buttonWidth(unbind, 12) - 4;
+        int bx = (int) (x + w - 4 - bw);
+        float kw = Paint.kbdWidth(c.key(), 11);
+        float kx = bx - 8 - kw;
+        float room = kx - (x + 27) - 6;
+        String name = Draw.ellipsize(c.label(), room, 13, Weight.MEDIUM);
+        String others = String.join(", ", c.others());
+        String sub = Draw.ellipsize(others, room, 11, Weight.REGULAR);
+        Draw.label(g, name, x + 27, cy - 3.5f, 13, Weight.MEDIUM, t.c("text.primary"));
+        Draw.label(g, sub, x + 27, cy + 4.5f, 11, Weight.REGULAR, t.c("text.muted"));
+        if (Kit.over(mx, my, (int) x + 27, (int) y, (int) room, (int) ROW_H)) {
+            tooltip = List.of(Component.translatable("ryscore.keys.busy", c.key()).getString(), others,
+                Component.translatable("ryscore.keys.all_fire").getString());
+        }
+        Paint.kbd(g, c.key(), kx, cy, 11, t.c("button.bg"), t.c("button.border"), t.c("text.body"));
+        Kit.button(g, t, hits, bx, (int) cy - 6, bw, 12, unbind, false, mx, my, () -> {
+            c.unbind();
+            clashesAt = 0;
+        });
     }
 
     private void groupHeader(GuiGraphics g, Theme t, List<Action> shown, Action.Group grp, float x, float cy, float w) {

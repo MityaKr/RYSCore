@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
@@ -51,6 +52,7 @@ public final class Actions {
     private static final Set<String> COVERED_DOCK = new HashSet<>();
     private static Function<String, String> modNames = ns -> ns;
     private static ToIntFunction<KeyMapping> keyMods = k -> 0;
+    private static BiPredicate<KeyMapping, KeyMapping> contextClash = (a, b) -> true;
     private static @Nullable ActionConfig config;
     private static @Nullable Path configFile;
 
@@ -306,7 +308,9 @@ public final class Actions {
             }
             if (k.isUnbound() || !Binding.keyOf(k).equals(binding.key())) continue;
             if (keyMods.applyAsInt(k) != binding.mods()) continue;
-            out.add(Component.translatable(k.getCategory()).getString() + " (" + Component.translatable(k.getName()).getString() + ")");
+            // своё сочетание работает только в мире: клавиша игры только для окон с ним не спорит
+            if (!contextClash.test(WHEEL, k)) continue;
+            out.add(describe(k));
         }
         for (var e : bindings().entrySet()) {
             if (e.getKey().equals(self) || !e.getValue().equals(binding)) continue;
@@ -314,6 +318,89 @@ public final class Actions {
             out.add(a == null ? e.getKey().toString() : a.label().getString());
         }
         return out;
+    }
+
+    /**
+     * Конфликт нашей клавиши (1.15): клавиша мода семьи RYS или своё сочетание игрока, на которой сидят чужие действия
+     * с пересекающимся контекстом NeoForge. Одно нажатие идёт всем, поэтому окно «Клавиши» предлагает снять нашу.
+     */
+    public static final class Clash {
+        private final @Nullable KeyMapping mapping;
+        private final @Nullable ResourceLocation action;
+        private final String label, key;
+        private final List<String> others;
+
+        Clash(@Nullable KeyMapping mapping, @Nullable ResourceLocation action, String label, String key, List<String> others) {
+            this.mapping = mapping;
+            this.action = action;
+            this.label = label;
+            this.key = key;
+            this.others = List.copyOf(others);
+        }
+
+        /** Наше действие: «Карта», «Колесо быстрых действий». */
+        public String label() {
+            return label;
+        }
+
+        /** Клавиша: «V», «Alt+1». */
+        public String key() {
+            return key;
+        }
+
+        /** Чужие на той же клавише: «Mekanism (режим шлема)». */
+        public List<String> others() {
+            return others;
+        }
+
+        /** Снять нашу: клавиша мода становится «не назначена», своё сочетание убирается. */
+        public void unbind() {
+            if (mapping != null) {
+                Minecraft mc = Minecraft.getInstance();
+                mc.options.setKey(mapping, InputConstants.UNKNOWN);
+                KeyMapping.resetMapping();
+                mc.options.save();
+            } else if (action != null) {
+                bind(action, null);
+            }
+        }
+    }
+
+    /** Клавиша мода семьи: имя начинается с {@code key.rys} (ryscore, rysmap, rysteams, rysquests, ryscope, rysclaims, ryshelm). */
+    static boolean family(KeyMapping k) {
+        return k.getName().startsWith("key.rys");
+    }
+
+    /** Все конфликты наших клавиш с чужими (1.15): клавиши модов семьи и свои сочетания игрока. */
+    public static List<Clash> clashes() {
+        List<Clash> out = new ArrayList<>();
+        KeyMapping[] all = Minecraft.getInstance().options.keyMappings;
+        Map<InputConstants.Key, List<KeyMapping>> byKey = new LinkedHashMap<>();
+        for (KeyMapping k : all) if (!k.isUnbound()) byKey.computeIfAbsent(Binding.keyOf(k), x -> new ArrayList<>()).add(k);
+        for (KeyMapping ours : all) {
+            if (!family(ours) || ours.isUnbound()) continue;
+            InputConstants.Key key = Binding.keyOf(ours);
+            int mods = keyMods.applyAsInt(ours);
+            List<String> others = new ArrayList<>();
+            for (KeyMapping k : byKey.getOrDefault(key, List.of())) {
+                if (k == ours || family(k) || keyMods.applyAsInt(k) != mods || !contextClash.test(ours, k)) continue;
+                others.add(describe(k));
+            }
+            if (others.isEmpty()) continue;
+            String label = Binding.of(key, mods).label();
+            out.add(new Clash(ours, null, Component.translatable(ours.getName()).getString(), label, others));
+        }
+        for (var e : bindings().entrySet()) {
+            List<String> others = conflicts(e.getValue(), e.getKey());
+            if (others.isEmpty()) continue;
+            Action a = get(e.getKey());
+            out.add(new Clash(null, e.getKey(), a == null ? e.getKey().toString() : a.label().getString(), e.getValue().label(), others));
+        }
+        return out;
+    }
+
+    private static String describe(KeyMapping k) {
+        return Component.translatable(k.getCategory()).getString() + " (" + Component.translatable(k.getName()).getString() + ")";
     }
 
     /** Клавиши, которые сейчас ни за кем не закреплены: из спокойного набора (знаки, Insert, Home, F-клавиши, мышь 4 и 5). */
@@ -399,6 +486,11 @@ public final class Actions {
     /** Модификатор клавиши игры по NeoForge ({@code KeyModifier}) во флагах GLFW. Ставит загрузчик. */
     public static void keyModifiers(ToIntFunction<KeyMapping> mods) {
         keyMods = mods;
+    }
+
+    /** Пересекаются ли контексты двух клавиш игры (NeoForge {@code KeyConflictContext}). Ставит загрузчик. С 1.15. */
+    public static void keyContexts(BiPredicate<KeyMapping, KeyMapping> clash) {
+        contextClash = clash;
     }
 
     /** Каждый тик клиента: клавиша колеса. */

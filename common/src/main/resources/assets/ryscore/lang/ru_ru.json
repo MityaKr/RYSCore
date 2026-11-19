@@ -60,5 +60,11 @@
   "ryscore.keys.mode.click": "Только клик",
   "ryscore.keys.free": "Свободные клавиши",
   "ryscore.keys.free_hint": "ни за кем не закреплены",
-  "ryscore.keys.note": "Перетащите действие на сектор. Клавиши работают в мире, когда окно игры не открыто. С Ctrl, Shift или Alt клавиша не спорит с той же буквой без них."
+  "ryscore.keys.note": "Перетащите действие на сектор. Клавиши работают в мире, когда окно игры не открыто. С Ctrl, Shift или Alt клавиша не спорит с той же буквой без них.",
+  "ryscore.keys.clashes": "Конфликты · %s",
+  "ryscore.keys.clashes_head": "Конфликты",
+  "ryscore.keys.clashes_hint": "одно нажатие идёт всем",
+  "ryscore.keys.unbind": "Снять нашу",
+  "ryscore.dock.keys": "Клавиши",
+  "ryscore.dock.keys.desc": "Колесо на %s, свои клавиши и конфликты"
 }
