@@ -57,6 +57,18 @@ public interface MapApi {
     }
 
     /**
+     * Подменю в меню по правой кнопке (1.15.4): пункты с {@link MenuItem.Builder#group} этой группы собираются в один пункт
+     * «Название ›». Группа с одним видимым пунктом показывается самим пунктом. Тот же id заменяет прежнюю. Группа
+     * {@link #PING_GROUP} («Пинг») есть в ядре сразу.
+     */
+    default void menuGroup(MenuGroup group) {
+        Holder.put(Holder.MENU_GROUPS, group.id(), group);
+    }
+
+    /** Группа «Пинг ›» для пунктов пинга команде (RYSMap, RYSTeams). С 1.15.4. */
+    ResourceLocation PING_GROUP = ResourceLocation.fromNamespaceAndPath("ryscore", "ping");
+
+    /**
      * Строка под миникартой: «чья земля», «оператор», тревога. Поставщик зовётся каждый кадр, null прячет строку.
      * Меньший {@code order} стоит выше. Тот же id заменяет прежнюю.
      */
@@ -135,6 +147,13 @@ public interface MapApi {
         List<MenuItem> out = Holder.values(Holder.MENUS);
         out.sort(Comparator.comparingInt(MenuItem::order));
         return out;
+    }
+
+    /** Группа меню по id или null, для реализации. С 1.15.4. */
+    static @Nullable MenuGroup menuGroup(ResourceLocation id) {
+        synchronized (Holder.MENU_GROUPS) {
+            return Holder.MENU_GROUPS.get(id);
+        }
     }
 
     /** Режимы полотна по {@link Mode#order()}, для реализации. С 1.12. */
@@ -416,6 +435,7 @@ public interface MapApi {
         private final @Nullable Icons.Shape icon;
         private final Predicate<Spot> visible, enabled;
         private final Consumer<Spot> run;
+        private final @Nullable ResourceLocation group;
 
         private MenuItem(Builder b) {
             this.id = b.id;
@@ -425,6 +445,7 @@ public interface MapApi {
             this.visible = b.visible;
             this.enabled = b.enabled;
             this.run = Objects.requireNonNull(b.run, "Пункту меню нужно действие: run(...)");
+            this.group = b.group;
         }
 
         public static Builder builder(ResourceLocation id, Component label) {
@@ -438,6 +459,8 @@ public interface MapApi {
         public boolean visible(Spot spot) { return visible.test(spot); }
         public boolean enabled(Spot spot) { return enabled.test(spot); }
         public void run(Spot spot) { run.accept(spot); }
+        /** Подменю пункта ({@link MapApi#menuGroup}) или null. С 1.15.4. */
+        public @Nullable ResourceLocation group() { return group; }
 
         public static final class Builder {
             private final ResourceLocation id;
@@ -446,6 +469,7 @@ public interface MapApi {
             private @Nullable Icons.Shape icon;
             private Predicate<Spot> visible = s -> true, enabled = s -> true;
             private @Nullable Consumer<Spot> run;
+            private @Nullable ResourceLocation group;
 
             private Builder(ResourceLocation id, Component label) {
                 this.id = id;
@@ -458,9 +482,60 @@ public interface MapApi {
             /** Пункт виден, но серый, если ложь. */
             public Builder enabled(Predicate<Spot> when) { this.enabled = Objects.requireNonNull(when); return this; }
             public Builder run(Consumer<Spot> action) { this.run = Objects.requireNonNull(action); return this; }
+            /**
+             * Положить пункт в подменю группы ({@link MapApi#menuGroup}, {@link MapApi#PING_GROUP}). В подменю пункт
+             * подписан своей подписью, поэтому её стоит делать короткой («Опасно»). Неизвестная группа: пункт в общем
+             * списке. С 1.15.4.
+             */
+            public Builder group(@Nullable ResourceLocation group) { this.group = group; return this; }
 
             public MenuItem build() {
                 return new MenuItem(this);
+            }
+        }
+    }
+
+    /** Подменю меню по правой кнопке (1.15.4). Собирается {@link #builder}. */
+    final class MenuGroup {
+        private final ResourceLocation id;
+        private final Component label;
+        private final @Nullable Icons.Shape icon;
+        private final int order;
+
+        private MenuGroup(ResourceLocation id, Component label, @Nullable Icons.Shape icon, int order) {
+            this.id = id;
+            this.label = label;
+            this.icon = icon;
+            this.order = order;
+        }
+
+        /** Группа с подписью; значок и место по умолчанию берутся у первого её пункта. */
+        public static Builder builder(ResourceLocation id, Component label) {
+            return new Builder(Objects.requireNonNull(id), Objects.requireNonNull(label));
+        }
+
+        public ResourceLocation id() { return id; }
+        public Component label() { return label; }
+        public @Nullable Icons.Shape icon() { return icon; }
+        /** Место пункта группы в меню; {@link Integer#MIN_VALUE}: место первого пункта группы. */
+        public int order() { return order; }
+
+        public static final class Builder {
+            private final ResourceLocation id;
+            private final Component label;
+            private @Nullable Icons.Shape icon;
+            private int order = Integer.MIN_VALUE;
+
+            private Builder(ResourceLocation id, Component label) {
+                this.id = id;
+                this.label = label;
+            }
+
+            public Builder icon(@Nullable Icons.Shape icon) { this.icon = icon; return this; }
+            public Builder order(int order) { this.order = order; return this; }
+
+            public MenuGroup build() {
+                return new MenuGroup(id, label, icon, order);
             }
         }
     }
@@ -973,6 +1048,11 @@ public interface MapApi {
     final class Holder {
         private static final Map<ResourceLocation, Layer> LAYERS = new LinkedHashMap<>();
         private static final Map<ResourceLocation, MenuItem> MENUS = new LinkedHashMap<>();
+        private static final Map<ResourceLocation, MenuGroup> MENU_GROUPS = new LinkedHashMap<>();
+
+        static {
+            MENU_GROUPS.put(PING_GROUP, MenuGroup.builder(PING_GROUP, Component.translatable("ryscore.map.menu.ping")).icon(Icons.Shape.BELL).build());
+        }
         private static final Map<ResourceLocation, StatusLine> STATUSES = new LinkedHashMap<>();
         private static final Map<ResourceLocation, Mode> MODES = new LinkedHashMap<>();
         private static final Map<ResourceLocation, Tab> TABS = new LinkedHashMap<>();

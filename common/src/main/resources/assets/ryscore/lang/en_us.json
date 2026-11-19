@@ -76,5 +76,6 @@
   "ryscore.intro.keys.long": "%s action wheel · %s and %s answer requests",
   "ryscore.intro.keys.short": "%s action wheel",
   "ryscore.intro.keys.open": "Open keys",
-  "ryscore.intro.keys.ok": "Got it"
+  "ryscore.intro.keys.ok": "Got it",
+  "ryscore.map.menu.ping": "Ping"
 }

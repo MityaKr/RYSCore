@@ -76,5 +76,6 @@
   "ryscore.intro.keys.long": "%s колесо действий · %s и %s ответ на запрос",
   "ryscore.intro.keys.short": "%s колесо действий",
   "ryscore.intro.keys.open": "Открыть клавиши",
-  "ryscore.intro.keys.ok": "Понятно"
+  "ryscore.intro.keys.ok": "Понятно",
+  "ryscore.map.menu.ping": "Пинг"
 }
