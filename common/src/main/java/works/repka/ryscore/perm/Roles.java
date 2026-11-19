@@ -1,7 +1,9 @@
 package works.repka.ryscore.perm;
 
 import com.mojang.authlib.GameProfile;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -28,9 +30,37 @@ public final class Roles {
 
     private Roles() {}
 
+    /** Роль живёт в памяти 10 с: проверки прав идут в циклах рассылок, а поиск в списке операторов не бесплатный (1.15). */
+    static final long TTL_MS = 10_000;
+    private static final Map<UUID, Cached> CACHE = new ConcurrentHashMap<>();
+
+    private static final class Cached {
+        final String role;
+        final long at;
+
+        Cached(String role, long at) {
+            this.role = role;
+            this.at = at;
+        }
+    }
+
     /** Ставит RYSHelm при запуске. */
     public static void provide(@Nullable Provider p) {
         provider = p;
+        invalidateAll();
+    }
+
+    /**
+     * Забыть роль игрока (1.15): RYSHelm зовёт после правки модераторов, ядро сам при /op, /deop и выходе игрока.
+     * Без вызова роль всё равно обновится через {@link #TTL_MS}.
+     */
+    public static void invalidate(UUID player) {
+        CACHE.remove(player);
+    }
+
+    /** Забыть все роли: смена поставщика, остановка сервера, правка таблицы целиком. С 1.15. */
+    public static void invalidateAll() {
+        CACHE.clear();
     }
 
     /** Старшинство роли: оператор 2, модератор 1, игрок и неизвестная 0. */
@@ -50,6 +80,15 @@ public final class Roles {
     }
 
     private static String of(MinecraftServer server, UUID id, @Nullable GameProfile profile) {
+        long now = System.currentTimeMillis();
+        Cached c = CACHE.get(id);
+        if (c != null && now - c.at < TTL_MS) return c.role;
+        String role = resolve(server, id, profile);
+        CACHE.put(id, new Cached(role, now));
+        return role;
+    }
+
+    private static String resolve(MinecraftServer server, UUID id, @Nullable GameProfile profile) {
         Provider p = provider;
         if (p != null) {
             try {
@@ -62,10 +101,23 @@ public final class Roles {
         return opLevel(server, id, profile) >= OP_LEVEL ? OPERATOR : PLAYER;
     }
 
-    /** Уровень оператора игры: список операторов и хозяин одиночного мира с читами. */
+    /**
+     * Уровень оператора игры: список операторов и хозяин одиночного мира с читами. Хозяина игра узнаёт по имени, поэтому
+     * без профиля имя берётся у игрока в сети или из кэша профилей сервера (1.15).
+     */
     public static int opLevel(MinecraftServer server, UUID id, @Nullable GameProfile profile) {
-        GameProfile gp = profile != null ? profile : new GameProfile(id, "");
-        return server.getProfilePermissions(gp);
+        return server.getProfilePermissions(profile != null ? profile : profile(server, id));
+    }
+
+    private static GameProfile profile(MinecraftServer server, UUID id) {
+        var online = server.getPlayerList().getPlayer(id);
+        if (online != null) return online.getGameProfile();
+        var cache = server.getProfileCache();
+        if (cache != null) {
+            var known = cache.get(id);
+            if (known.isPresent()) return known.get();
+        }
+        return new GameProfile(id, "");
     }
 
     public static boolean atLeast(ServerPlayer player, String role) {

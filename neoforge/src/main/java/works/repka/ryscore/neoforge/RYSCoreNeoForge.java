@@ -27,6 +27,9 @@ import net.neoforged.neoforge.server.permission.nodes.PermissionNode;
 import net.neoforged.neoforge.server.permission.nodes.PermissionTypes;
 import works.repka.ryscore.RYSCore;
 import works.repka.ryscore.perm.Perms;
+import works.repka.ryscore.perm.Roles;
+import net.neoforged.neoforge.event.entity.player.PermissionsChangedEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import works.repka.ryscore.migrate.Migrations;
 
 /**
@@ -47,7 +50,13 @@ public final class RYSCoreNeoForge {
                 RYSCore.LOG.error("{} переезд не запустился", Migrations.TAG, t);
             }
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent e) -> RYSCore.server(null));
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent e) -> {
+            RYSCore.server(null);
+            Roles.invalidateAll();
+        });
+        // роль в памяти ядра забывается при /op, /deop и выходе игрока (1.15)
+        NeoForge.EVENT_BUS.addListener((PermissionsChangedEvent e) -> Roles.invalidate(e.getEntity().getUUID()));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> Roles.invalidate(e.getEntity().getUUID()));
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> commands(e.getDispatcher()));
         permissions();
     }
