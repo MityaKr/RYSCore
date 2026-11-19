@@ -286,6 +286,84 @@ public final class Kit {
         Draw.dot(g, on ? x + 9 : x + 1, y + 1, 8, on ? t.c("accent.text") : t.c("text.muted"));
     }
 
+    // --- ожидание ответа сервера (1.15.3, {@link Pending}) ---
+
+    /** Крутилка: дуга в три четверти круга с центром (cx, cy), оборот за 0,8 с. Цвет обычно {@code text.muted}. */
+    public static void spinner(GuiGraphics g, float cx, float cy, float radius, int argb) {
+        float phase = (System.currentTimeMillis() % 800L) / 800f * 360f;
+        Draw.ring(g, cx, cy, radius, Math.max(0.75f, radius * 0.3f), Draw.alpha(argb, 0.25f));
+        Draw.arc(g, cx, cy, radius - Math.max(0.75f, radius * 0.3f) / 2f, phase, 270, Math.max(0.75f, radius * 0.3f), argb);
+    }
+
+    /**
+     * Кнопка, которая ждёт ответа: пока {@code busy}, подпись тусклая, слева от неё крутилка, повторное нажатие никуда не
+     * идёт (место занято, клик не проваливается под кнопку). Без ожидания как {@link #button}.
+     */
+    public static void button(GuiGraphics g, Theme t, Hits hits, int x, int y, int w, int h, String label, boolean primary, boolean busy, int mx, int my, Runnable action) {
+        if (!busy) {
+            button(g, t, hits, x, y, w, h, label, primary, mx, my, action);
+            return;
+        }
+        if (t.beveled()) t.button(g, x, y, w, h, false, primary);
+        else if (primary) Draw.round(g, x, y, w, h, 4.5f, Draw.alpha(t.c("accent"), 0.55f));
+        else Draw.roundBox(g, x, y, w, h, 4.5f, t.c("button.bg"), t.c("button.border"));
+        float px = primary ? 13 : 12;
+        Weight weight = primary ? Weight.SEMIBOLD : Weight.REGULAR;
+        int fg = primary ? Draw.alpha(t.c("accent.text"), 0.7f) : t.c("text.dim");
+        float r = Math.min(3.5f, h / 2f - 2.5f);
+        float tw = Draw.labelWidth(label, px, weight), sw = r * 2 + 3;
+        float tx = x + (w - tw - sw) / 2f;
+        if (tw + sw > w - 6) {
+            // подпись не помещается рядом с крутилкой: только крутилка
+            spinner(g, x + w / 2f, y + h / 2f, r, fg);
+        } else {
+            spinner(g, tx + r, y + h / 2f, r, fg);
+            Draw.label(g, label, tx + sw, y + h / 2f, px, weight, fg);
+        }
+        hits.add(x, y, w, h, b -> {});
+    }
+
+    /**
+     * Переключатель, который ждёт ответа: рисуется в новом (оптимистичном) положении, приглушённым, вокруг ручки
+     * крутилка. Без ожидания как {@link #toggle(GuiGraphics, Theme, int, int, boolean, boolean)}.
+     */
+    public static void toggle(GuiGraphics g, Theme t, int x, int y, boolean on, boolean hot, boolean busy) {
+        if (!busy) {
+            toggle(g, t, x, y, on, hot);
+            return;
+        }
+        int fill = Draw.mix(on ? t.c("state.ok") : t.c("slot.bg"), t.c("panel.bg"), 0.35f);
+        Draw.round(g, x, y, 18, 10, 5f, fill);
+        int knob = on ? t.c("accent.text") : t.c("text.muted");
+        float kx = on ? x + 13 : x + 5;
+        Draw.dot(g, on ? x + 9 : x + 1, y + 1, 8, Draw.alpha(knob, 0.6f));
+        spinner(g, kx, y + 5, 2.5f, on ? t.c("state.ok") : t.c("text.secondary"));
+    }
+
+    /**
+     * Счётчик, который ждёт ответа: значение уже новое (оптимистичное), тусклое, под ним бегает крутилка; минус и плюс
+     * остаются нажимаемыми, следующее нажатие считается от показанного значения.
+     */
+    public static void stepper(GuiGraphics g, Theme t, Hits hits, int x, int y, int w, String value, boolean busy, int mx, int my, Runnable minus, Runnable plus) {
+        if (!busy) {
+            stepper(g, t, hits, x, y, w, value, mx, my, minus, plus);
+            return;
+        }
+        iconButton(g, t, x, y, 18, over(mx, my, x, y, 18, 18));
+        Draw.round(g, x + 5.5f, y + 8.5f, 7, 1f, 0.02f, t.c("button.fg"));
+        int px = x + w - 18;
+        iconButton(g, t, px, y, 18, over(mx, my, px, y, 18, 18));
+        Draw.round(g, px + 5.5f, y + 8.5f, 7, 1f, 0.02f, t.c("button.fg"));
+        Draw.round(g, px + 8.5f, y + 5.5f, 1f, 7, 0.02f, t.c("button.fg"));
+        float tw = Draw.labelWidth(value, 13, Weight.MEDIUM);
+        float r = 2.5f, sw = r * 2 + 2.5f;
+        float tx = x + (w - tw - sw) / 2f;
+        Draw.label(g, value, tx, y + 9f, 13, Weight.MEDIUM, t.c("text.muted"));
+        spinner(g, tx + tw + 2.5f + r, y + 9f, r, t.c("text.muted"));
+        hits.add(x, y, 18, 18, b -> minus.run());
+        hits.add(px, y, 18, 18, b -> plus.run());
+    }
+
     /** Плашка предмета со счётчиком, 20×20. Сам предмет кладётся в (x + 2, y + 2) до вызова {@link #count}. */
     public static void tile(GuiGraphics g, Theme t, int x, int y, boolean hot) {
         Draw.roundBox(g, x, y, 20, 20, 3.5f, t.c("cell.bg"), hot ? t.c("accent") : t.c("cell.border"));

@@ -175,6 +175,7 @@ DockButton.builder("rysquests_book").label(Component.translatable("rysquests.doc
 | `theme.ThemeManager` | загрузка тем из `assets/<ns>/ryscore_themes/*.json`, общий выбор темы в `config/ryscore/theme.json` |
 | `ui.Draw` | скругления по пикселям устройства, текст, стрелки, замок, значки `info`, `question`, `magnifier`, `cross`, `star`, `dot`; линии, пунктир, ломаные, дуги, кольца |
 | `ui.Loading` | индикатор расчёта внутри окна |
+| `ui.Pending` | правки окна, ждущие ответа сервера (1.15.3): оптимистичное значение, крутилка `Kit.spinner`, откат по ошибке или через 6 с; `Kit.button`, `toggle`, `stepper` с признаком `busy` |
 | `ui.Tiles` | много одинаковых ячеек за один вызов отрисовки |
 | `ui.Type` | шрифт Inter в пикселях экрана |
 | `ui.Field` | поле ввода с чипами |
