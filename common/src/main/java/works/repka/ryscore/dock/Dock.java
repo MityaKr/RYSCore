@@ -102,7 +102,12 @@ public final class Dock {
     /** Новый экран: прежняя раскладка недействительна, пока её не сделают заново. Вызывает кор. */
     public static void screenChanged() {
         visible = false;
+        ftbScreen = null;
     }
+
+    /** Видна ли панель FTB, запомнено на экран (1.15): отражение FTB не зовётся каждый кадр. */
+    private static @Nullable java.lang.ref.WeakReference<Screen> ftbScreen;
+    private static boolean ftbScreenVisible;
 
     /** Мод-хозяин панели. Один на сборку: RYScope. */
     public static void setHost(@Nullable Host value) {
@@ -161,12 +166,18 @@ public final class Dock {
     /** Показывает ли FTB Library свою панель на этом экране (пока её не убрали). */
     public static boolean ftbVisible(Screen screen) {
         if (!available()) return false;
+        var remembered = ftbScreen;
+        if (remembered != null && remembered.get() == screen) return ftbScreenVisible;
+        boolean result;
         try {
-            return (boolean) Ftb.visible.invoke(null, screen);
+            result = (boolean) Ftb.visible.invoke(null, screen);
         } catch (Throwable t) {
             fail(t);
             return false;
         }
+        ftbScreen = new java.lang.ref.WeakReference<>(screen);
+        ftbScreenVisible = result;
+        return result;
     }
 
     /** Заменяет ли панель семьи кнопки FTB на этом экране. */

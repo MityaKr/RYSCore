@@ -40,7 +40,10 @@ final class NoticeToast implements Toast {
     /** Где карточка стояла в последнем кадре, в единицах GUI игры. */
     private float gx, gy;
     private Layout layout;
-    private String layoutKey = "";
+    /** Для чего посчитана раскладка: тема, масштаб, число сложенных (1.15: сравнение полей, без склейки строк в кадре). */
+    private @org.jetbrains.annotations.Nullable String layoutTheme;
+    private double layoutPixels = -1;
+    private int layoutCount = -1;
     private float[] cross;
     private final List<float[]> buttonHits = new ArrayList<>();
 
@@ -52,7 +55,7 @@ final class NoticeToast implements Toast {
     boolean replace(Notice next) {
         int before = slotCount();
         notice = next;
-        layoutKey = "";
+        layout = null;
         elapsed = 0;
         return slotCount() == before;
     }
@@ -63,7 +66,7 @@ final class NoticeToast implements Toast {
         if (!card.item.isEmpty()) icons.add(card.item);
         if (card.action != null) notice.action = card.action;
         elapsed = 0;
-        layoutKey = "";
+        layout = null;
     }
 
     void dismiss() {
@@ -199,9 +202,11 @@ final class NoticeToast implements Toast {
 
     private Layout layout() {
         Theme t = ThemeManager.get();
-        String key = t.id + "|" + UiScale.pixels() + "|" + count + "|" + System.identityHashCode(notice);
-        if (layout != null && key.equals(layoutKey)) return layout;
-        layoutKey = key;
+        double pixels = UiScale.pixels();
+        if (layout != null && t.id.equals(layoutTheme) && pixels == layoutPixels && count == layoutCount) return layout;
+        layoutTheme = t.id;
+        layoutPixels = pixels;
+        layoutCount = count;
         layout = switch (notice.kind) {
             case CARD -> {
                 float textW = W - 5 - 19 - 5.5f - 6 - reserve();
