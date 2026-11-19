@@ -71,5 +71,10 @@
   "ryscore.action.travel.detail": "ways: %s",
   "ryscore.wheel.back": "Back",
   "ryscore.wheel.nested": "circle: %s",
-  "ryscore.keys.nested": "second circle: %s"
+  "ryscore.keys.nested": "second circle: %s",
+  "ryscore.intro.keys.title": "RYS family keys",
+  "ryscore.intro.keys.long": "%s action wheel · %s and %s answer requests",
+  "ryscore.intro.keys.short": "%s action wheel",
+  "ryscore.intro.keys.open": "Open keys",
+  "ryscore.intro.keys.ok": "Got it"
 }

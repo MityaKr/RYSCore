@@ -27,6 +27,8 @@ final class UiConfig {
     /** Звук уведомлений семьи и его громкость в процентах: по умолчанию включён и обычной громкости. */
     boolean noticeSound = true;
     int noticeVolume = 100;
+    /** Разовые подсказки, которые игрок уже видел ({@link Onboarding}), с 1.15. */
+    java.util.Set<String> seen = new java.util.LinkedHashSet<>();
 
     private UiConfig() {}
 

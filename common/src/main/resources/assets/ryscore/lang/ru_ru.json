@@ -71,5 +71,10 @@
   "ryscore.action.travel.detail": "способов: %s",
   "ryscore.wheel.back": "Назад",
   "ryscore.wheel.nested": "круг: %s",
-  "ryscore.keys.nested": "второй круг: %s"
+  "ryscore.keys.nested": "второй круг: %s",
+  "ryscore.intro.keys.title": "Клавиши семьи",
+  "ryscore.intro.keys.long": "%s колесо действий · %s и %s ответ на запрос",
+  "ryscore.intro.keys.short": "%s колесо действий",
+  "ryscore.intro.keys.open": "Открыть клавиши",
+  "ryscore.intro.keys.ok": "Понятно"
 }

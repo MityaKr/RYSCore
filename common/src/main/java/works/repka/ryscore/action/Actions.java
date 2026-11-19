@@ -532,6 +532,7 @@ public final class Actions {
         while (WHEEL.consumeClick()) {
             if (mc.screen == null && mc.player != null) WheelScreen.open(holdMode());
         }
+        KeysIntro.tick();
     }
 
     private static ActionConfig config() {
