@@ -8,30 +8,32 @@ import works.repka.ryscore.ui.Onboarding;
 import works.repka.ryscore.ui.ScaledScreen;
 
 /**
- * Карточка «Клавиши семьи» (1.15): один раз, через 5 с игры в мире без открытого окна, уведомление семьи с главными
- * клавишами и кнопкой «Открыть клавиши». Флаг в {@code config/ryscore/ui.json}, больше не появляется.
+ * Карточка «Клавиши семьи» (1.15): через 5 с игры в мире без открытого окна уведомление семьи с главными клавишами и
+ * кнопкой «Открыть клавиши». Один раз на профиль игры: флаг в {@code config/ryscore/ui.json} ставится и сохраняется в
+ * момент первого показа, даже если карточку проигнорировали (1.15.2, логика в {@link IntroGate}).
  *
- * <p>С 1.15.1 не встаёт поверх окон семьи (ночные проверки 19.11: закрывала шапку окна «Сервер» и кнопки карты). Пять
- * секунд считаются только без открытого окна; если игрок открыл окно семьи, пока карточка видна, она уходит и вернётся
- * через 5 с после закрытия окна.
+ * <p>С 1.15.1 не встаёт поверх окон семьи: если игрок открыл окно семьи, пока карточка видна, она уходит и один раз
+ * вернётся через 5 с после закрытия окна, пока игрок в этом мире.
  */
 final class KeysIntro {
     private static final int DELAY_TICKS = 100;
-    private static int ticks;
+    private static final IntroGate GATE = new IntroGate(DELAY_TICKS, 1, new IntroGate.Store() {
+        @Override
+        public boolean seen() {
+            return Onboarding.seen(Onboarding.KEYS);
+        }
+
+        @Override
+        public void markSeen() {
+            Onboarding.markSeen(Onboarding.KEYS);
+        }
+    });
 
     private KeysIntro() {}
 
     static void tick() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) {
-            ticks = 0;
-            return;
-        }
-        if (mc.screen != null) return;
-        if (ticks > DELAY_TICKS || ++ticks < DELAY_TICKS) return;
-        ticks = DELAY_TICKS + 1;
-        if (Onboarding.seen(Onboarding.KEYS)) return;
-        Onboarding.markSeen(Onboarding.KEYS);
+        if (!GATE.tick(mc.player != null && mc.level != null, mc.screen != null)) return;
         String wheel = Actions.WHEEL.isUnbound() ? "—" : Binding.keyLabel(Binding.keyOf(Actions.WHEEL));
         String yes = Answers.acceptKey(), no = Answers.declineKey();
         Notice.buttons(Notice.CORE, "keys_intro").icon(Icons.Shape.LETTER_YO)
@@ -40,15 +42,7 @@ final class KeysIntro {
                 Component.translatable("ryscore.intro.keys.short", wheel).getString())
             .button(Component.translatable("ryscore.intro.keys.open").getString(), true, () -> Actions.openKeys(null))
             .button(Component.translatable("ryscore.intro.keys.ok").getString(), false, () -> {})
-            .hiddenWhen(KeysIntro::covered)
+            .hiddenWhen(() -> GATE.covered(Minecraft.getInstance().screen instanceof ScaledScreen))
             .millis(30_000).show();
-    }
-
-    /** Открыто окно семьи: карточка уходит, флаг снимается, счёт пяти секунд начнётся заново после закрытия окна. */
-    private static boolean covered() {
-        if (!(Minecraft.getInstance().screen instanceof ScaledScreen)) return false;
-        Onboarding.forget(Onboarding.KEYS);
-        ticks = 0;
-        return true;
     }
 }
