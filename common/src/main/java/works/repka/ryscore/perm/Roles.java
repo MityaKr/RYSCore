@@ -24,6 +24,7 @@ public final class Roles {
 
     private static volatile @Nullable Provider provider;
     private static volatile @Nullable String clientRole;
+    private static volatile boolean moderationActive;
 
     private Roles() {}
 
@@ -84,9 +85,29 @@ public final class Roles {
         return ClientOp.op() ? OPERATOR : PLAYER;
     }
 
-    /** RYSHelm на клиенте сообщает роль, пришедшую с сервера. Null — вернуть правило по уровню оператора. */
+    /** RYSHelm на клиенте сообщает роль, пришедшую с сервера. Null — вернуть правило по уровню оператора (и снять признак модерации). */
     public static void setClient(@Nullable String role) {
         clientRole = role;
+        if (role == null) moderationActive = false;
+    }
+
+    /**
+     * Признак с сервера (1.15): на сервере назначен хоть один модератор или есть открытые жалобы. Сообщает RYSHelm вместе
+     * с ролью. Пока его нет, оператору кольцо «Модерация» не показывается: в кооперативе друзей все операторы, жалоб и
+     * модераторов нет.
+     */
+    public static void setModerationActive(boolean active) {
+        moderationActive = active;
+    }
+
+    public static boolean moderationActive() {
+        return moderationActive;
+    }
+
+    /** Нужно ли своему игроку кольцо «Модерация»: он модератор, или он оператор и модерация на сервере идёт. С 1.15. */
+    public static boolean moderationRing() {
+        String role = client();
+        return MODERATOR.equals(role) || rank(role) >= rank(MODERATOR) && moderationActive;
     }
 
     public static boolean atLeastClient(String role) {

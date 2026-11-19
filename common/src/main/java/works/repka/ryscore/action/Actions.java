@@ -69,7 +69,7 @@ public final class Actions {
                 "ryshelm:ender_chest", "ryshelm:trash")
             .build());
         ring(Ring.builder(Ring.MODERATION).label(() -> Component.translatable("ryscore.ring.moderation")).order(10)
-            .available(() -> Roles.atLeastClient(Roles.MODERATOR))
+            .available(Roles::moderationRing)
             .defaults("ryshelm:players", "ryshelm:reports", "ryshelm:staff_chat", "ryshelm:spectate", "ryshelm:spectate_return",
                 "ryshelm:journal", "rysclaims:bypass", "ryshelm:open")
             .build());
