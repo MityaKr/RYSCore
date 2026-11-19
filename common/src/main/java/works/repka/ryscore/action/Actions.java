@@ -44,6 +44,13 @@ public final class Actions {
     public static final String CATEGORY = "key.categories.ryscore";
     /** Клавиша колеса: Ё ({@code `}), в RepYS свободна (вопрос 3 плана, проверено по options.txt 19.11). */
     public static final KeyMapping WHEEL = new KeyMapping("key.ryscore.wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_GRAVE_ACCENT, CATEGORY);
+    /**
+     * Сектор-круг ядра «Перенести…» (1.15): все способы перенести себя, кроме дома и «назад», одним сектором. Появляется,
+     * когда есть хоть одно из его действий; мод добавляет своё через {@code suggest(TRAVEL, id)}.
+     */
+    public static final ResourceLocation TRAVEL = ResourceLocation.fromNamespaceAndPath(RYSCore.MOD_ID, "travel");
+    private static final List<ResourceLocation> TRAVEL_CHILDREN = List.of(rl("rysmap:spawn"), rl("rysmap:places"), rl("rysmap:team_home"),
+        rl("rysmap:players"), rl("rysmap:bed"), rl("rysmap:rtp"));
 
     private static final Map<ResourceLocation, Action> REGISTERED = new LinkedHashMap<>();
     private static final Map<ResourceLocation, Supplier<? extends Collection<Action>>> PROVIDERS = new LinkedHashMap<>();
@@ -58,7 +65,7 @@ public final class Actions {
 
     static {
         ring(Ring.builder(Ring.MINE).label(() -> Component.translatable("ryscore.ring.mine")).order(0)
-            .defaults("rysmap:home", "rysmap:back", "rysmap:spawn", "rysmap:places", "rysmap:team_home", "rysmap:players",
+            .defaults("rysmap:home", "rysmap:back", "ryscore:travel", "rysteams:ping", "rysmap:new_point", "rysclaims:claim_here",
                 "ryshelm:ender_chest", "ryshelm:trash")
             .build());
         ring(Ring.builder(Ring.MODERATION).label(() -> Component.translatable("ryscore.ring.moderation")).order(10)
@@ -74,6 +81,10 @@ public final class Actions {
     }
 
     private Actions() {}
+
+    private static ResourceLocation rl(String s) {
+        return ResourceLocation.parse(s);
+    }
 
     // --- реестр ---
 
@@ -141,6 +152,8 @@ public final class Actions {
             }
         }
         for (Action a : dockActions()) out.putIfAbsent(a.id(), a);
+        Action travel = travel(out);
+        if (travel != null) out.putIfAbsent(TRAVEL, travel);
         List<Action> list = new ArrayList<>(out.values());
         list.sort(Comparator.comparingInt((Action a) -> a.group().order()).thenComparing(a -> a.group().id())
             .thenComparingInt(Action::order));
@@ -154,10 +167,26 @@ public final class Actions {
         List<Action> all = all();
         for (Action x : all) if (x.id().equals(id)) return x;
         for (Action x : all) {
-            if (!x.opensList()) continue;
-            for (Action child : x.list()) if (child.id().equals(id)) return child;
+            if (x.opensList()) for (Action child : x.list()) if (child.id().equals(id)) return child;
+            if (x.opensNested()) for (Action child : x.nested()) if (child.id().equals(id)) return child;
         }
         return null;
+    }
+
+    /** «Перенести…» из тех действий, что есть; null, если ни одного. */
+    private static @Nullable Action travel(Map<ResourceLocation, Action> have) {
+        List<ResourceLocation> ids = new ArrayList<>(TRAVEL_CHILDREN);
+        for (ResourceLocation id : SUGGESTED.getOrDefault(TRAVEL, List.of())) if (!ids.contains(id)) ids.add(id);
+        List<Action> children = new ArrayList<>();
+        for (ResourceLocation id : ids) {
+            Action a = have.get(id);
+            if (a != null && children.size() < Ring.SECTORS) children.add(a);
+        }
+        if (children.isEmpty()) return null;
+        List<Action> fixed = List.copyOf(children);
+        return Action.builder(TRAVEL).label(() -> Component.translatable("ryscore.action.travel")).icon(Icons.Shape.TELEPORT)
+            .group(Action.Group.PLACES).order(-1).detail(() -> Component.translatable("ryscore.action.travel.detail", fixed.size()).getString())
+            .nested(() -> fixed).build();
     }
 
     private static List<Action> dockActions() {
@@ -448,6 +477,10 @@ public final class Actions {
     public static void run(Action action) {
         if (action.opensList()) {
             WheelScreen.openList(action);
+            return;
+        }
+        if (action.opensNested()) {
+            WheelScreen.openNested(action);
             return;
         }
         Action.State state = action.state();

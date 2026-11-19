@@ -452,6 +452,7 @@ final class KeysScreen extends ScaledScreen {
         if (st.kind() == Action.State.Kind.PAUSE) sub = sub.isEmpty() ? st.clock() : sub + " · " + st.clock();
         if (dim && !st.reason().isEmpty()) sub = st.reason();
         if (a.opensList()) sub = Component.translatable("ryscore.keys.list", a.list().size()).getString();
+        if (a.opensNested()) sub = Component.translatable("ryscore.keys.nested", a.nested().size()).getString();
         String shownSub = Draw.ellipsize(sub, nameRoom, 11, Weight.REGULAR);
         Draw.label(g, shownSub, x + 27, cy + 4.5f, 11, Weight.REGULAR, t.c("text.muted"));
         if (Kit.over(mx, my, (int) x + 27, (int) y, (int) nameRoom, (int) ROW_H) && (!shownName.equals(name) || !shownSub.equals(sub))) {

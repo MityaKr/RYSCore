@@ -42,6 +42,8 @@ final class WheelScreen extends ScaledScreen {
     private long hoverAt;
     private final Kit.Hits hits = new Kit.Hits();
     private @Nullable Action list;
+    /** Открытый второй круг («Перенести…»), с 1.15. */
+    private @Nullable Action nested;
     private String query = "";
     private int selected;
     private final Scroller scroll = new Scroller();
@@ -64,6 +66,18 @@ final class WheelScreen extends ScaledScreen {
         mc.setScreen(new WheelScreen(hold, null));
     }
 
+    /** Колесо сразу на втором круге действия (своя клавиша на «Перенести…»). */
+    static void openNested(Action action) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof WheelScreen w) {
+            w.enter(action);
+            return;
+        }
+        WheelScreen w = new WheelScreen(false, null);
+        w.nested = action;
+        mc.setScreen(w);
+    }
+
     /** Колесо с открытым списком действия (своя клавиша на «Места сервера…»). */
     static void openList(Action action) {
         Minecraft mc = Minecraft.getInstance();
@@ -84,6 +98,12 @@ final class WheelScreen extends ScaledScreen {
     }
 
     private List<@Nullable Action> slots() {
+        if (nested != null) {
+            List<Action> out = new ArrayList<>(nested.nested());
+            while (out.size() > Ring.SECTORS) out.removeLast();
+            while (out.size() < Ring.SECTORS) out.add(null);
+            return out;
+        }
         Ring r = currentRing();
         return r == null ? java.util.Collections.nCopies(Ring.SECTORS, null) : Actions.slots(r.id());
     }
@@ -114,6 +134,7 @@ final class WheelScreen extends ScaledScreen {
         if (hovered >= 0) {
             Action a = slots().get(hovered);
             if (a != null && a.opensList()) showList(a);
+            else if (a != null && a.opensNested()) enter(a);
             else if (a != null && a.state().usable()) perform(a);
             else onClose();
         } else {
@@ -126,9 +147,20 @@ final class WheelScreen extends ScaledScreen {
             showList(a);
             return;
         }
+        if (a.opensNested()) {
+            enter(a);
+            return;
+        }
         if (!a.state().usable()) return;
         Minecraft.getInstance().setScreen(null);
         Actions.run(a);
+    }
+
+    /** Второй круг на месте первого. */
+    private void enter(Action a) {
+        nested = a;
+        list = null;
+        hoverSince = -1;
     }
 
     private void showList(Action a) {
@@ -146,6 +178,7 @@ final class WheelScreen extends ScaledScreen {
         }
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             if (list != null) list = null;
+            else if (nested != null) nested = null;
             else onClose();
             return true;
         }
@@ -198,7 +231,7 @@ final class WheelScreen extends ScaledScreen {
     }
 
     private void switchRing(int step) {
-        if (rings.size() < 2) return;
+        if (rings.size() < 2 || nested != null) return;
         ring = Math.floorMod(ring + step, rings.size());
         Actions.setLastRing(currentRing().id());
         hoverSince = -1;
@@ -257,7 +290,7 @@ final class WheelScreen extends ScaledScreen {
             }
         }
         float cx = cx(), cy = cy();
-        if (rings.size() > 1) ringTabs(g, t, cx, cy - R - 20, mx, my);
+        if (rings.size() > 1 && nested == null) ringTabs(g, t, cx, cy - R - 20, mx, my);
         for (int i = 0; i < Ring.SECTORS; i++) sector(g, t, i, slots.get(i), cx, cy);
         for (int i = 0; i < Ring.SECTORS; i++) sectorContent(g, t, i, slots.get(i), cx, cy);
         center(g, t, cx, cy, hovered >= 0 ? slots.get(hovered) : null, mx, my);
@@ -354,6 +387,17 @@ final class WheelScreen extends ScaledScreen {
         Draw.ring(g, cx, cy, r, 0.5f, t.c("wheel.line"));
         int fg = t.c("wheel.fg"), muted = t.c("wheel.muted");
         float room = r * 2 - 8;
+        if (a == null && nested != null) {
+            // второй круг: в середине его имя и «Назад»
+            centered(g, nested.label().getString(), cx, cy - 9, 13, Weight.SEMIBOLD, fg, room);
+            String back = Component.translatable("ryscore.wheel.back").getString();
+            float bw = Math.min(room, Draw.labelWidth(back, 12, Weight.MEDIUM) + 12), bh = 13, bx = cx - bw / 2f, by = cy + 1;
+            boolean hot = Kit.over(mx, my, (int) bx, (int) by, (int) bw, (int) bh);
+            Draw.roundBox(g, bx, by, bw, bh, 3.5f, hot ? t.c("wheel.hover") : t.c("wheel.tile"), t.c("wheel.line"));
+            centered(g, back, cx, by + bh / 2f, 12, Weight.MEDIUM, fg, room);
+            hits.add((int) bx, (int) by, (int) bw, (int) bh, b -> nested = null);
+            return;
+        }
         if (a == null) {
             Ring rg = currentRing();
             String name = rg == null ? "" : rg.label().getString();
@@ -379,7 +423,8 @@ final class WheelScreen extends ScaledScreen {
                 room, 11.5f, Weight.REGULAR, 3));
             case PAUSE -> lines.add(Component.translatable("ryscore.wheel.pause", st.clock()).getString());
             default -> {
-                if (a.opensList()) lines.add(Component.translatable("ryscore.wheel.list", a.list().size()).getString());
+                if (a.opensNested()) lines.add(Component.translatable("ryscore.wheel.nested", a.nested().size()).getString());
+                else if (a.opensList()) lines.add(Component.translatable("ryscore.wheel.list", a.list().size()).getString());
                 else if (!a.detail().isEmpty()) lines.addAll(Draw.wrapLabel(a.detail(), room, 11.5f, Weight.REGULAR, 2));
             }
         }
@@ -410,6 +455,9 @@ final class WheelScreen extends ScaledScreen {
         if (list != null) {
             parts.add(new String[] {"", Component.translatable("ryscore.wheel.hint.search").getString()});
             parts.add(new String[] {"Enter", Component.translatable("ryscore.wheel.hint.enter").getString()});
+            parts.add(new String[] {"Esc", Component.translatable("ryscore.wheel.hint.back").getString()});
+        } else if (nested != null) {
+            parts.add(new String[] {"1–8", Component.translatable("ryscore.wheel.hint.pick").getString()});
             parts.add(new String[] {"Esc", Component.translatable("ryscore.wheel.hint.back").getString()});
         } else {
             parts.add(new String[] {"1–8", Component.translatable("ryscore.wheel.hint.pick").getString()});

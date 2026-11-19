@@ -66,5 +66,10 @@
   "ryscore.keys.clashes_hint": "one press goes to all",
   "ryscore.keys.unbind": "Unbind ours",
   "ryscore.dock.keys": "Keys",
-  "ryscore.dock.keys.desc": "Wheel on %s, own keys and conflicts"
+  "ryscore.dock.keys.desc": "Wheel on %s, own keys and conflicts",
+  "ryscore.action.travel": "Travel…",
+  "ryscore.action.travel.detail": "ways: %s",
+  "ryscore.wheel.back": "Back",
+  "ryscore.wheel.nested": "circle: %s",
+  "ryscore.keys.nested": "second circle: %s"
 }

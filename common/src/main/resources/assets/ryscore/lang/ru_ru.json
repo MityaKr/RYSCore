@@ -66,5 +66,10 @@
   "ryscore.keys.clashes_hint": "одно нажатие идёт всем",
   "ryscore.keys.unbind": "Снять нашу",
   "ryscore.dock.keys": "Клавиши",
-  "ryscore.dock.keys.desc": "Колесо на %s, свои клавиши и конфликты"
+  "ryscore.dock.keys.desc": "Колесо на %s, свои клавиши и конфликты",
+  "ryscore.action.travel": "Перенести…",
+  "ryscore.action.travel.detail": "способов: %s",
+  "ryscore.wheel.back": "Назад",
+  "ryscore.wheel.nested": "круг: %s",
+  "ryscore.keys.nested": "второй круг: %s"
 }

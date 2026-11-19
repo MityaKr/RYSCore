@@ -144,6 +144,7 @@ public final class Action {
     private final @Nullable IntSupplier badge;
     private final @Nullable Runnable run;
     private final @Nullable Supplier<List<Action>> list;
+    private final @Nullable Supplier<List<Action>> nested;
     private final int order;
     private final boolean bindable;
 
@@ -162,6 +163,7 @@ public final class Action {
         this.badge = b.badge;
         this.run = b.run;
         this.list = b.list;
+        this.nested = b.nested;
         this.order = b.order;
         this.bindable = b.bindable;
     }
@@ -238,6 +240,18 @@ public final class Action {
         return out == null ? List.of() : out;
     }
 
+    /** Открывает ли действие второй круг колеса («Перенести…»), с 1.15. */
+    public boolean opensNested() {
+        return nested != null;
+    }
+
+    /** Действия второго круга, не больше восьми идут в сектора. Пусто, если действие не круг. С 1.15. */
+    public List<Action> nested() {
+        if (nested == null) return List.of();
+        List<Action> out = nested.get();
+        return out == null ? List.of() : out;
+    }
+
     public int order() {
         return order;
     }
@@ -270,6 +284,7 @@ public final class Action {
         private @Nullable IntSupplier badge;
         private @Nullable Runnable run;
         private @Nullable Supplier<List<Action>> list;
+        private @Nullable Supplier<List<Action>> nested;
         private int order;
         private boolean bindable = true;
 
@@ -352,6 +367,15 @@ public final class Action {
         /** Действие открывает список рядом с колесом: на клавише и в секторе тоже открывается список. */
         public Builder list(Supplier<List<Action>> list) {
             this.list = list;
+            return this;
+        }
+
+        /**
+         * Действие открывает второй круг колеса на месте первого (1.15): «Перенести…» со спавном, местами, домом команды.
+         * Esc и середина круга возвращают назад. На своей клавише открывает колесо сразу на этом круге.
+         */
+        public Builder nested(Supplier<List<Action>> nested) {
+            this.nested = nested;
             return this;
         }
 
