@@ -11,7 +11,7 @@ import works.repka.ryscore.ui.Notices;
 
 /**
  * Уведомления семьи стоят в колонке тостов игры, но шороха появления и ухода тоста у них нет: свой короткий звук играет ядро
- * ({@link Notices}), а строки RYScope и RYSTeams идут молча.
+ * ({@link Notices}), а строки RYSIndex и RYSTeams идут молча.
  */
 @Mixin(targets = "net.minecraft.client.gui.components.toasts.ToastComponent$ToastInstance")
 public abstract class ToastInstanceMixin {

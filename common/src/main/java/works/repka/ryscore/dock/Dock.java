@@ -34,7 +34,7 @@ import works.repka.ryscore.ui.Type.Weight;
  *
  * <p>Три случая:
  * <ul>
- *   <li>FTB Library нет: панель семьи с кнопками реестра. Её ставит хозяин ({@link Host}, например RYScope в своей
+ *   <li>FTB Library нет: панель семьи с кнопками реестра. Её ставит хозяин ({@link Host}, например RYSIndex в своей
  *       левой колонке), а без хозяина кор рисует её сам слева от окна инвентаря;</li>
  *   <li>FTB Library есть, хозяина нет (стоит только RYSQuests): своей панели нет, кнопки модов стоят в панели FTB
  *       (их файлы {@code sidebar_buttons});</li>
@@ -69,7 +69,7 @@ public final class Dock {
         Map.entry("ftblibrary_config", 0xFF6B7488));
 
     /**
-     * Мод, который сам ставит панель на своих экранах (RYScope: верх левой колонки, панели обходят друг друга).
+     * Мод, который сам ставит панель на своих экранах (RYSIndex: верх левой колонки, панели обходят друг друга).
      * Без хозяина кор рисует панель сам слева от окна инвентаря.
      */
     public interface Host {
@@ -109,7 +109,7 @@ public final class Dock {
     private static @Nullable java.lang.ref.WeakReference<Screen> ftbScreen;
     private static boolean ftbScreenVisible;
 
-    /** Мод-хозяин панели. Один на сборку: RYScope. */
+    /** Мод-хозяин панели. Один на сборку: RYSIndex. */
     public static void setHost(@Nullable Host value) {
         host = value;
     }

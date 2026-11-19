@@ -395,7 +395,7 @@ public final class Actions {
         }
     }
 
-    /** Клавиша мода семьи: имя начинается с {@code key.rys} (ryscore, rysmap, rysteams, rysquests, ryscope, rysclaims, ryshelm). */
+    /** Клавиша мода семьи: имя начинается с {@code key.rys} (ryscore, rysmap, rysteams, rysquests, rysindex, rysclaims, ryshelm). */
     static boolean family(KeyMapping k) {
         return k.getName().startsWith("key.rys");
     }

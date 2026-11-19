@@ -11,7 +11,7 @@ version = "${mod_version}"
 displayName = "${mod_name}"
 authors = "${mod_authors}"
 description = '''
-Shared themes and UI for the RYS mod family: RYScope, RYSQuests and others.
+Shared themes and UI for the RYS mod family: RYSIndex, RYSQuests and others.
 '''
 
 [[dependencies.${mod_id}]]
