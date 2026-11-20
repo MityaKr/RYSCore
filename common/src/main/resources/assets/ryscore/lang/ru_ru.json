@@ -68,6 +68,7 @@
   "ryscore.dock.keys": "Клавиши",
   "ryscore.dock.keys.desc": "Колесо на %s, свои клавиши и конфликты",
   "ryscore.action.travel": "Перенести…",
+  "ryscore.action.travel.short": "Перенос",
   "ryscore.action.travel.detail": "способов: %s",
   "ryscore.wheel.back": "Назад",
   "ryscore.wheel.nested": "круг: %s",

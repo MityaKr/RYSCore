@@ -656,7 +656,8 @@ final class KeysScreen extends ScaledScreen {
         boolean dim = a.state().kind() == Action.State.Kind.OFF;
         Draw.roundBox(g, x - 7.5f, y - 11, 15, 15, 4, t.c("slot.bg"), t.c("card.border"));
         Paint.icon(g, a, x - 3.75f, y - 7.25f, 7.5f, dim ? t.c("text.muted") : t.c("text.primary"));
-        String label = Draw.ellipsize(a.label().getString(), 36, 11, Weight.MEDIUM);
+        String full = a.label().getString();
+        String label = Draw.labelWidth(full, 11, Weight.MEDIUM) <= 36 ? full : Draw.ellipsize(a.shortLabel().getString(), 36, 11, Weight.MEDIUM);
         Draw.label(g, label, x - Draw.labelWidth(label, 11, Weight.MEDIUM) / 2f, y + 9, 11, Weight.MEDIUM, dim ? t.c("text.muted") : t.c("text.primary"));
         int badge = a.badge();
         if (badge > 0) {

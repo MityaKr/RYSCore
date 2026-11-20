@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -132,6 +134,7 @@ public final class Action {
 
     private final ResourceLocation id;
     private final Supplier<Component> label;
+    private final @Nullable Supplier<Component> shortLabel;
     private final Supplier<String> detail;
     private final String section;
     private final String right;
@@ -151,6 +154,7 @@ public final class Action {
     private Action(Builder b) {
         this.id = b.id;
         this.label = b.label;
+        this.shortLabel = b.shortLabel;
         this.detail = b.detail;
         this.section = b.section;
         this.right = b.right;
@@ -180,7 +184,35 @@ public final class Action {
         return label.get();
     }
 
-    /** Вторая строка: под подписью в секторе и в строке окна клавиш («База · 24 м»). Пусто, если нечего сказать. */
+    /**
+     * Короткое имя для сектора колеса, когда полное не помещается даже чуть мельче (1.16): «Пинг» вместо «Пинг команде».
+     * Без своего ({@link Builder#shortLabel}) берётся перевод с ключом подписи и суффиксом {@code .short}
+     * ({@code rysteams.action.ping.short}), если он есть, иначе полное имя.
+     */
+    public Component shortLabel() {
+        if (shortLabel != null) {
+            Component c = shortLabel.get();
+            if (c != null) return c;
+        }
+        Component full = label();
+        if (full.getContents() instanceof TranslatableContents tc) {
+            String key = tc.getKey() + ".short";
+            if (Language.getInstance().has(key)) return Component.translatable(key, tc.getArgs());
+        }
+        return full;
+    }
+
+    /** Есть ли у действия подменю рядом с колесом: список ({@link #opensList}) или набор действий ({@link #opensNested}). С 1.16. */
+    public boolean opensSub() {
+        return list != null || nested != null;
+    }
+
+    /** Строки подменю: список или набор действий. Пусто, если подменю нет. С 1.16. */
+    public List<Action> sub() {
+        return list != null ? list() : nested();
+    }
+
+    /** Вторая строка: в середине колеса при наведении (с 1.16 в секторе её нет) и в строке окна клавиш («База · 24 м»). Пусто, если нечего сказать. */
     public String detail() {
         String d = detail.get();
         return d == null ? "" : d;
@@ -240,12 +272,12 @@ public final class Action {
         return out == null ? List.of() : out;
     }
 
-    /** Открывает ли действие второй круг колеса («Перенести…»), с 1.15. */
+    /** Открывает ли действие набор действий («Перенести…»), с 1.15; с 1.16 он встаёт подменю рядом с колесом, как список. */
     public boolean opensNested() {
         return nested != null;
     }
 
-    /** Действия второго круга, не больше восьми идут в сектора. Пусто, если действие не круг. С 1.15. */
+    /** Действия набора «Перенести…». Пусто, если действие не набор. С 1.15. */
     public List<Action> nested() {
         if (nested == null) return List.of();
         List<Action> out = nested.get();
@@ -273,6 +305,7 @@ public final class Action {
     public static final class Builder {
         private final ResourceLocation id;
         private Supplier<Component> label;
+        private @Nullable Supplier<Component> shortLabel;
         private Supplier<String> detail = () -> "";
         private String section = "", right = "";
         private @Nullable Icons.Shape shape;
@@ -301,6 +334,17 @@ public final class Action {
 
         public Builder label(Supplier<Component> label) {
             this.label = label;
+            return this;
+        }
+
+        /** Короткое имя для тесного сектора колеса (1.16); без него ищется перевод {@code <ключ подписи>.short}. */
+        public Builder shortLabel(Component shortLabel) {
+            this.shortLabel = () -> shortLabel;
+            return this;
+        }
+
+        public Builder shortLabel(Supplier<Component> shortLabel) {
+            this.shortLabel = shortLabel;
             return this;
         }
 
@@ -364,15 +408,16 @@ public final class Action {
             return this;
         }
 
-        /** Действие открывает список рядом с колесом: на клавише и в секторе тоже открывается список. */
+        /** Действие открывает список рядом с колесом (подменю с поиском): на клавише и в секторе тоже открывается список. */
         public Builder list(Supplier<List<Action>> list) {
             this.list = list;
             return this;
         }
 
         /**
-         * Действие открывает второй круг колеса на месте первого (1.15): «Перенести…» со спавном, местами, домом команды.
-         * Esc и середина круга возвращают назад. На своей клавише открывает колесо сразу на этом круге.
+         * Действие открывает набор действий (1.15): «Перенести…» со спавном, местами, домом команды. С 1.16 это подменю
+         * рядом с колесом, колесо остаётся на месте; строка-список внутри набора раскрывается в том же подменю.
+         * Esc и «Назад» закрывают подменю. На своей клавише открывает колесо сразу с этим подменю.
          */
         public Builder nested(Supplier<List<Action>> nested) {
             this.nested = nested;

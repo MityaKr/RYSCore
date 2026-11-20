@@ -1,7 +1,9 @@
 package works.repka.ryscore.action;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
@@ -25,36 +27,42 @@ import works.repka.ryscore.ui.Type.Weight;
  *   <li>держать Ё: мышь выбирает сектор, отпустить — выполнить, отпустить в середине — ничего;</li>
  *   <li>нажать и отпустить: колесо остаётся, выбор кликом, в середине «Настроить»;</li>
  *   <li>1–8 выбирают сектор, колесо мыши и Tab листают кольца, Esc закрывает;</li>
- *   <li>сектор-список («Места сервера…») открывает рядом список с поиском: при задержке мыши, по клику или по клавише.</li>
+ *   <li>в секторе только значок и короткое название, подпись наведённого сектора или строки видна в середине (1.16);</li>
+ *   <li>сектор с подменю («Перенести…», «Места сервера», «Пинг команде») открывает его панелью рядом, колесо остаётся на месте
+ *       (1.16): по клику или клавише, а наведением только в режиме «по зажатию». Esc и «Назад» закрывают подменю, второй Esc колесо.</li>
  * </ul>
  * Мир не на паузе, камера не крутится: курсор свободен, пока колесо открыто. Цвета колеса тёмные в любой теме (токены {@code wheel.*}).
  */
 final class WheelScreen extends ScaledScreen {
     private static final float R = 88, IR = 36, GAP = 1.6f;
-    private static final long HOLD_MS = 250, LIST_DELAY_MS = 450;
-    private static final float LIST_W = 160, ROW_H = 17;
+    private static final long HOLD_MS = 250;
+    private static final float LIST_W = 160, ROW_H = 17, SUB_GAP = 14, MARGIN = 6, LABEL_H = 7, LABEL_PAD = 2.5f;
+    /** С какого числа строк в подменю есть поиск: короткому набору («Перенести…») он не нужен. */
+    private static final int SEARCH_FROM = 9;
 
     private final List<Ring> rings;
     private int ring;
     private boolean holding;
     private final long openedAt = System.currentTimeMillis();
-    private int hovered = -1, hoverSince = -1;
+    private int hovered = -1, hoverDone = -1;
     private long hoverAt;
     private final Kit.Hits hits = new Kit.Hits();
-    private @Nullable Action list;
-    /** Открытый второй круг («Перенести…»), с 1.15. */
-    private @Nullable Action nested;
+    /** Открытые подменю: внизу сектор колеса, сверху строка-список, раскрытая внутри него (1.16). */
+    private final Deque<Action> subs = new ArrayDeque<>();
     private String query = "";
     private int selected;
     private final Scroller scroll = new Scroller();
     private float listX, listY, listH;
     private List<Action> shownRows = List.of();
+    /** Строка подменю под мышью в прошлом кадре: её подпись в середине, её выполняет отпускание Ё. */
+    private @Nullable Action rowHot;
+    private int lastMx, lastMy;
 
-    private WheelScreen(boolean hold, @Nullable Action list) {
+    private WheelScreen(boolean hold, @Nullable Action sub) {
         super(Component.translatable("ryscore.wheel.title"));
         this.rings = Actions.availableRings();
         this.holding = hold;
-        this.list = list;
+        if (sub != null) subs.push(sub);
         ResourceLocationIndex last = new ResourceLocationIndex();
         this.ring = last.find(rings, Actions.lastRing());
     }
@@ -66,23 +74,20 @@ final class WheelScreen extends ScaledScreen {
         mc.setScreen(new WheelScreen(hold, null));
     }
 
-    /** Колесо сразу на втором круге действия (своя клавиша на «Перенести…»). */
+    /** Колесо с раскрытым подменю набора (своя клавиша на «Перенести…»). */
     static void openNested(Action action) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof WheelScreen w) {
-            w.enter(action);
-            return;
-        }
-        WheelScreen w = new WheelScreen(false, null);
-        w.nested = action;
-        mc.setScreen(w);
+        openSub(action);
     }
 
-    /** Колесо с открытым списком действия (своя клавиша на «Места сервера…»). */
+    /** Колесо с раскрытым подменю-списком (своя клавиша на «Места сервера…»). */
     static void openList(Action action) {
+        openSub(action);
+    }
+
+    private static void openSub(Action action) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof WheelScreen w) {
-            w.showList(action);
+            w.showSub(action);
             return;
         }
         mc.setScreen(new WheelScreen(false, action));
@@ -98,22 +103,35 @@ final class WheelScreen extends ScaledScreen {
     }
 
     private List<@Nullable Action> slots() {
-        if (nested != null) {
-            List<Action> out = new ArrayList<>(nested.nested());
-            while (out.size() > Ring.SECTORS) out.removeLast();
-            while (out.size() < Ring.SECTORS) out.add(null);
-            return out;
-        }
         Ring r = currentRing();
         return r == null ? java.util.Collections.nCopies(Ring.SECTORS, null) : Actions.slots(r.id());
     }
 
     private float cx() {
-        return list != null ? width / 2f - 85 : width / 2f;
+        return width / 2f;
     }
 
     private float cy() {
         return height / 2f - 6;
+    }
+
+    private static boolean same(@Nullable Action a, @Nullable Action b) {
+        return a != null && b != null && a.id().equals(b.id());
+    }
+
+    /** Сектор колеса, чьё подменю открыто. */
+    private @Nullable Action root() {
+        return subs.peekLast();
+    }
+
+    /** Подменю, которое сейчас видно. */
+    private @Nullable Action top() {
+        return subs.peekFirst();
+    }
+
+    private boolean searchable() {
+        Action owner = top();
+        return owner != null && owner.sub().size() >= SEARCH_FROM;
     }
 
     // --- ввод ---
@@ -130,25 +148,28 @@ final class WheelScreen extends ScaledScreen {
         if (!holding || wheelKeyDown()) return;
         holding = false;
         if (System.currentTimeMillis() - openedAt < HOLD_MS) return;
-        // отпустили после удержания: выполнить сектор под мышью, в середине ничего
+        // отпустили после удержания: над подменю выполнить строку под мышью, над сектором — сектор, в середине ничего
+        if (!subs.isEmpty() && overList(lastMx, lastMy)) {
+            if (rowHot != null) perform(rowHot, true);
+            return;
+        }
         if (hovered >= 0) {
             Action a = slots().get(hovered);
-            if (a != null && a.opensList()) showList(a);
-            else if (a != null && a.opensNested()) enter(a);
-            else if (a != null && a.state().usable()) perform(a);
+            if (a != null && a.opensSub()) {
+                if (!same(root(), a)) showSub(a);
+            } else if (a != null && a.state().usable()) perform(a, false);
             else onClose();
         } else {
             onClose();
         }
     }
 
-    private void perform(Action a) {
-        if (a.opensList()) {
-            showList(a);
-            return;
-        }
-        if (a.opensNested()) {
-            enter(a);
+    /** Выполняет действие; с подменю открывает его: из сектора рядом с колесом, из строки — в той же панели. */
+    private void perform(Action a, boolean fromRow) {
+        if (a.opensSub()) {
+            if (fromRow) drill(a);
+            else if (same(root(), a)) closeSub();
+            else showSub(a);
             return;
         }
         if (!a.state().usable()) return;
@@ -156,18 +177,38 @@ final class WheelScreen extends ScaledScreen {
         Actions.run(a);
     }
 
-    /** Второй круг на месте первого. */
-    private void enter(Action a) {
-        nested = a;
-        list = null;
-        hoverSince = -1;
+    private void showSub(Action a) {
+        subs.clear();
+        subs.push(a);
+        resetList();
     }
 
-    private void showList(Action a) {
-        list = a;
+    private void drill(Action a) {
+        subs.push(a);
+        resetList();
+    }
+
+    /** Закрывает видимое подменю: строку-список возвращает к набору, набор — к колесу. */
+    private void back() {
+        if (subs.isEmpty()) return;
+        subs.pop();
+        if (subs.isEmpty()) hoverDone = hovered;
+        resetList();
+    }
+
+    private void closeSub() {
+        if (subs.isEmpty()) return;
+        subs.clear();
+        hoverDone = hovered;
+        resetList();
+    }
+
+    private void resetList() {
         query = "";
         selected = 0;
         scroll.reset();
+        rowHot = null;
+        shownRows = List.of();
     }
 
     @Override
@@ -177,15 +218,25 @@ final class WheelScreen extends ScaledScreen {
             return true;
         }
         if (key == GLFW.GLFW_KEY_ESCAPE) {
-            if (list != null) list = null;
-            else if (nested != null) nested = null;
+            if (!subs.isEmpty()) back();
             else onClose();
             return true;
         }
-        if (list != null) {
+        // 1–8 выбирают сектор и при открытом подменю, пока в поиске пусто
+        if (key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_8 && query.isEmpty()) {
+            Action a = slots().get(key - GLFW.GLFW_KEY_1);
+            if (a != null) perform(a, false);
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_TAB) {
+            switchRing(Screen.hasShiftDown() ? -1 : 1);
+            return true;
+        }
+        if (!subs.isEmpty()) {
             switch (key) {
                 case GLFW.GLFW_KEY_BACKSPACE -> {
-                    if (!query.isEmpty()) query = query.substring(0, query.offsetByCodePoints(query.length(), -1));
+                    if (query.isEmpty()) back();
+                    else query = query.substring(0, query.offsetByCodePoints(query.length(), -1));
                     selected = 0;
                     return true;
                 }
@@ -198,10 +249,7 @@ final class WheelScreen extends ScaledScreen {
                     return true;
                 }
                 case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
-                    if (selected < shownRows.size()) perform(shownRows.get(selected));
-                    return true;
-                }
-                case GLFW.GLFW_KEY_TAB -> {
+                    if (selected < shownRows.size()) perform(shownRows.get(selected), true);
                     return true;
                 }
                 default -> {
@@ -209,21 +257,14 @@ final class WheelScreen extends ScaledScreen {
                 }
             }
         }
-        if (key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_8) {
-            Action a = slots().get(key - GLFW.GLFW_KEY_1);
-            if (a != null) perform(a);
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_TAB) {
-            switchRing(Screen.hasShiftDown() ? -1 : 1);
-            return true;
-        }
         return super.keyPressed(key, scan, mods);
     }
 
     @Override
     public boolean charTyped(char c, int mods) {
-        if (list == null || Character.isISOControl(c)) return false;
+        if (subs.isEmpty() || Character.isISOControl(c)) return false;
+        if (!searchable()) return true;
+        if (query.isEmpty() && c >= '1' && c <= '8') return true; // цифру уже забрал сектор
         query += c;
         selected = 0;
         scroll.reset();
@@ -231,15 +272,21 @@ final class WheelScreen extends ScaledScreen {
     }
 
     private void switchRing(int step) {
-        if (rings.size() < 2 || nested != null) return;
+        if (rings.size() < 2) return;
         ring = Math.floorMod(ring + step, rings.size());
         Actions.setLastRing(currentRing().id());
-        hoverSince = -1;
+        subs.clear();
+        resetList();
+        hoverDone = -1;
+    }
+
+    private boolean overList(double x, double y) {
+        return !subs.isEmpty() && x >= listX - 4 && x < listX + LIST_W + 4 && y >= listY - 4 && y < listY + listH + 4;
     }
 
     @Override
     protected boolean onScroll(double x, double y, double sx, double sy) {
-        if (list != null && x >= listX && x < listX + LIST_W && y >= listY && y < listY + listH) {
+        if (overList(x, y)) {
             scroll.by((float) (-sy * ROW_H * 2));
             return true;
         }
@@ -250,20 +297,23 @@ final class WheelScreen extends ScaledScreen {
     @Override
     protected boolean onClick(double x, double y, int button) {
         if (hits.click(x, y, button)) return true;
+        if (overList(x, y)) return true;
         int s = sectorAt(x, y);
         if (s >= 0 && button == 0) {
             Action a = slots().get(s);
-            if (a != null) perform(a);
+            if (a != null) perform(a, false);
             return true;
         }
-        if (list != null && !(x >= listX && x < listX + LIST_W)) list = null;
+        closeSub();
         return true;
     }
 
     private int sectorAt(double x, double y) {
-        if (list != null && x >= listX - 4 && x < listX + LIST_W + 4 && y >= listY - 4 && y < listY + listH + 4) return -1;
+        if (overList(x, y)) return -1;
         double dx = x - cx(), dy = y - cy(), d = Math.hypot(dx, dy);
         if (d < IR) return -1;
+        // с открытым подменю промежуток между колесом и панелью ничей: путь мыши к панели не выбирает сектор
+        if (!subs.isEmpty() && d > R + 10) return -1;
         double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90 + 22.5;
         return (int) Math.floor(Math.floorMod((long) Math.floor(angle * 1000), 360_000L) / 1000.0 / 45.0) % Ring.SECTORS;
     }
@@ -274,28 +324,35 @@ final class WheelScreen extends ScaledScreen {
     protected void draw(GuiGraphics g, int mx, int my, float partialTick) {
         Theme t = ThemeManager.get();
         hits.clear();
+        lastMx = mx;
+        lastMy = my;
+        Action row = rowHot;
+        rowHot = null;
         Draw.rect(g, 0, 0, width, height, t.c("wheel.dim"));
         List<@Nullable Action> slots = slots();
         int over = sectorAt(mx, my);
         if (over != hovered) {
             hovered = over;
             hoverAt = System.currentTimeMillis();
+            hoverDone = -1;
         }
-        // задержка мыши на секторе-списке открывает список
-        if (!holding && hovered >= 0 && list == null) {
+        // задержка мыши на секторе с подменю открывает его только в режиме «по зажатию»
+        if (hovered >= 0) {
             Action a = slots.get(hovered);
-            if (a != null && a.opensList() && System.currentTimeMillis() - hoverAt > LIST_DELAY_MS && hoverSince != hovered) {
-                hoverSince = hovered;
-                showList(a);
+            if (a != null && a.opensSub()
+                && WheelLayout.hoverOpens(Actions.holdMode(), same(root(), a), hoverDone == hovered, System.currentTimeMillis() - hoverAt)) {
+                hoverDone = hovered;
+                showSub(a);
             }
         }
         float cx = cx(), cy = cy();
-        if (rings.size() > 1 && nested == null) ringTabs(g, t, cx, cy - R - 20, mx, my);
+        if (rings.size() > 1) ringTabs(g, t, cx, cy - R - 20, mx, my);
         for (int i = 0; i < Ring.SECTORS; i++) sector(g, t, i, slots.get(i), cx, cy);
         for (int i = 0; i < Ring.SECTORS; i++) sectorContent(g, t, i, slots.get(i), cx, cy);
-        center(g, t, cx, cy, hovered >= 0 ? slots.get(hovered) : null, mx, my);
+        Action info = row != null && !subs.isEmpty() ? row : hovered >= 0 ? slots.get(hovered) : null;
+        center(g, t, cx, cy, info, mx, my);
         keysHint(g, t, cx, cy + R + 19);
-        if (list != null) list(g, t, cx + 107, cy - 134, mx, my);
+        if (!subs.isEmpty()) list(g, t, cx, cy, mx, my);
     }
 
     private void ringTabs(GuiGraphics g, Theme t, float cx, float y, int mx, int my) {
@@ -316,8 +373,7 @@ final class WheelScreen extends ScaledScreen {
             Draw.label(g, labels.get(i), x + 9, y + 6, 12, Weight.SEMIBOLD, on ? t.c("wheel.fg") : t.c("wheel.muted"));
             int index = i;
             hits.add((int) x + 2, (int) y, (int) w, 12, b -> {
-                ring = index;
-                Actions.setLastRing(currentRing().id());
+                if (index != Math.floorMod(ring, rings.size())) switchRing(index - Math.floorMod(ring, rings.size()));
             });
             x += w;
         }
@@ -328,7 +384,7 @@ final class WheelScreen extends ScaledScreen {
     }
 
     private void sector(GuiGraphics g, Theme t, int i, @Nullable Action a, float cx, float cy) {
-        boolean on = i == hovered || (list != null && a == list);
+        boolean on = i == hovered || same(root(), a);
         boolean off = a == null || !a.state().usable() && a.state().kind() != Action.State.Kind.PAUSE;
         int fill = on ? t.c("wheel.hover") : off ? t.c("wheel.sector.off") : t.c("wheel.sector");
         int line = on ? t.c("wheel.hover.line") : t.c("wheel.line");
@@ -343,9 +399,11 @@ final class WheelScreen extends ScaledScreen {
         }
     }
 
+    /** Значок и название; подпись (место, расстояние, причина) только в середине колеса. Пауза остаётся часами под названием. */
     private void sectorContent(GuiGraphics g, Theme t, int i, @Nullable Action a, float cx, float cy) {
         double rad = Math.toRadians(-90 + i * 45);
-        float ir = (R + IR) / 2f;
+        // в верхней половине значок с подписью чуть дальше от середины: подпись под значком уходит в широкую часть сектора
+        float ir = (R + IR) / 2f - 5 * Math.min(0, (float) Math.sin(rad));
         float x = cx + (float) Math.cos(rad) * ir, y = cy + (float) Math.sin(rad) * ir;
         float nx = cx + (float) Math.cos(rad) * (R + 7.5f), ny = cy + (float) Math.sin(rad) * (R + 7.5f);
         String n = Integer.toString(i + 1);
@@ -353,11 +411,10 @@ final class WheelScreen extends ScaledScreen {
         if (a == null) return;
         Action.State st = a.state();
         boolean dim = !st.usable() && st.kind() != Action.State.Kind.PAUSE;
+        boolean pause = st.kind() == Action.State.Kind.PAUSE;
         int fg = dim ? t.c("wheel.muted") : t.c("wheel.fg");
-        String detail = st.kind() == Action.State.Kind.PAUSE ? st.clock() : st.kind() == Action.State.Kind.OFF && !st.reason().isEmpty()
-            ? shortReason(st.reason()) : a.opensList() ? "" : a.detail();
-        float tile = 19, top = y - (detail.isEmpty() ? 14 : 17);
-        boolean on = i == hovered;
+        float tile = 19, top = y - (pause ? 17 : 14);
+        boolean on = i == hovered || same(root(), a);
         int tileFill = on && !dim ? 0xFFF7F8FB : t.c("wheel.tile");
         Draw.round(g, x - tile / 2f, top, tile, tile, 4.5f, tileFill);
         Paint.icon(g, a, x - 4.75f, top + 4.75f, 9.5f, on && !dim ? 0xFF1C1F27 : fg);
@@ -368,17 +425,15 @@ final class WheelScreen extends ScaledScreen {
             Draw.round(g, x + tile / 2f - bw / 2f - 1, top - 3, bw, 9, 4.5f, t.c("wheel.hover"));
             Draw.label(g, b, x + tile / 2f - 1 - Draw.labelWidth(b, 10, Weight.SEMIBOLD) / 2f, top + 1.5f, 10, Weight.SEMIBOLD, t.c("wheel.fg"));
         }
-        String label = Draw.ellipsize(a.label().getString(), 78, 13, Weight.SEMIBOLD);
-        Draw.label(g, label, x - Draw.labelWidth(label, 13, Weight.SEMIBOLD) / 2f, top + tile + 6, 13, Weight.SEMIBOLD, fg);
-        if (!detail.isEmpty()) {
-            String d = Draw.ellipsize(detail, 78, 11, Weight.REGULAR);
-            int dc = st.kind() == Action.State.Kind.PAUSE ? t.c("wheel.fg") : t.c("wheel.muted");
-            Draw.label(g, d, x - Draw.labelWidth(d, 11, Weight.REGULAR) / 2f, top + tile + 13, 11, Weight.REGULAR, dc);
+        float ly = top + tile + 6;
+        float room = WheelLayout.labelRoom(i, x - cx, ly - cy, LABEL_H, IR, R, GAP, LABEL_PAD);
+        WheelLayout.Fit fit = WheelLayout.fit(a.label().getString(), a.shortLabel().getString(), room,
+            (s, px) -> Draw.labelWidth(s, px, Weight.SEMIBOLD));
+        Draw.label(g, fit.text(), x - Draw.labelWidth(fit.text(), fit.px(), Weight.SEMIBOLD) / 2f, ly, fit.px(), Weight.SEMIBOLD, fg);
+        if (pause) {
+            String c = st.clock();
+            Draw.label(g, c, x - Draw.labelWidth(c, 11, Weight.REGULAR) / 2f, top + tile + 13, 11, Weight.REGULAR, t.c("wheel.fg"));
         }
-    }
-
-    private static String shortReason(String reason) {
-        return reason.length() > 22 ? reason.substring(0, 21) + "…" : reason;
     }
 
     private void center(GuiGraphics g, Theme t, float cx, float cy, @Nullable Action a, int mx, int my) {
@@ -387,15 +442,11 @@ final class WheelScreen extends ScaledScreen {
         Draw.ring(g, cx, cy, r, 0.5f, t.c("wheel.line"));
         int fg = t.c("wheel.fg"), muted = t.c("wheel.muted");
         float room = r * 2 - 8;
-        if (a == null && nested != null) {
-            // второй круг: в середине его имя и «Назад»
-            centered(g, nested.label().getString(), cx, cy - 9, 13, Weight.SEMIBOLD, fg, room);
-            String back = Component.translatable("ryscore.wheel.back").getString();
-            float bw = Math.min(room, Draw.labelWidth(back, 12, Weight.MEDIUM) + 12), bh = 13, bx = cx - bw / 2f, by = cy + 1;
-            boolean hot = Kit.over(mx, my, (int) bx, (int) by, (int) bw, (int) bh);
-            Draw.roundBox(g, bx, by, bw, bh, 3.5f, hot ? t.c("wheel.hover") : t.c("wheel.tile"), t.c("wheel.line"));
-            centered(g, back, cx, by + bh / 2f, 12, Weight.MEDIUM, fg, room);
-            hits.add((int) bx, (int) by, (int) bw, (int) bh, b -> nested = null);
+        if (a == null && !subs.isEmpty()) {
+            // открыто подменю: в середине его имя и «Назад»
+            Action owner = top();
+            centered(g, owner == null ? "" : owner.label().getString(), cx, cy - 9, 13, Weight.SEMIBOLD, fg, room);
+            button(g, t, Component.translatable("ryscore.wheel.back").getString(), cx, cy + 1, room, mx, my, this::back);
             return;
         }
         if (a == null) {
@@ -407,31 +458,40 @@ final class WheelScreen extends ScaledScreen {
                 return;
             }
             centered(g, name, cx, cy - 9, 13, Weight.SEMIBOLD, fg, room);
-            String set = Component.translatable("ryscore.wheel.configure").getString();
-            float bw = Math.min(room, Draw.labelWidth(set, 12, Weight.MEDIUM) + 12), bh = 13, bx = cx - bw / 2f, by = cy + 1;
-            boolean hot = Kit.over(mx, my, (int) bx, (int) by, (int) bw, (int) bh);
-            Draw.roundBox(g, bx, by, bw, bh, 3.5f, hot ? t.c("wheel.hover") : t.c("wheel.tile"), t.c("wheel.line"));
-            centered(g, set, cx, by + bh / 2f, 12, Weight.MEDIUM, fg, room);
-            hits.add((int) bx, (int) by, (int) bw, (int) bh, b -> Actions.openKeys(null));
+            button(g, t, Component.translatable("ryscore.wheel.configure").getString(), cx, cy + 1, room, mx, my, () -> Actions.openKeys(null));
             return;
         }
         Action.State st = a.state();
-        String title = a.label().getString();
+        // полное имя: крупно, мельче, в две строки
+        String full = a.label().getString();
+        List<String> title = new ArrayList<>();
+        float tpx = 13;
+        for (float px : new float[] {16, 14, 13}) {
+            if (Draw.labelWidth(full, px, Weight.SEMIBOLD) <= room) {
+                title.add(full);
+                tpx = px;
+                break;
+            }
+        }
+        if (title.isEmpty()) title.addAll(Draw.wrapLabel(full, room, 13, Weight.SEMIBOLD, 2));
         List<String> lines = new ArrayList<>();
+        int most = title.size() > 1 ? 2 : 3;
         switch (st.kind()) {
             case OFF -> lines.addAll(Draw.wrapLabel(st.reason().isEmpty() ? Component.translatable("ryscore.wheel.unavailable").getString() : st.reason(),
-                room, 11.5f, Weight.REGULAR, 3));
+                room, 11.5f, Weight.REGULAR, most));
             case PAUSE -> lines.add(Component.translatable("ryscore.wheel.pause", st.clock()).getString());
             default -> {
-                if (a.opensNested()) lines.add(Component.translatable("ryscore.wheel.nested", a.nested().size()).getString());
-                else if (a.opensList()) lines.add(Component.translatable("ryscore.wheel.list", a.list().size()).getString());
-                else if (!a.detail().isEmpty()) lines.addAll(Draw.wrapLabel(a.detail(), room, 11.5f, Weight.REGULAR, 2));
+                if (!a.detail().isEmpty()) lines.addAll(Draw.wrapLabel(a.detail(), room, 11.5f, Weight.REGULAR, most - 1));
+                else if (a.opensSub()) lines.add(Component.translatable("ryscore.wheel.list", a.sub().size()).getString());
             }
         }
         boolean hint = holding && st.usable();
-        float block = 10 + lines.size() * 6.5f + (hint ? 10 : 0), y = cy - block / 2f;
-        centered(g, title, cx, y + 4.5f, 16, Weight.SEMIBOLD, fg, room);
-        y += 11;
+        float step = title.size() > 1 ? 8 : 11;
+        float block = (title.size() > 1 ? title.size() * 8f - 1 : 10) + lines.size() * 6.5f + (hint ? 10 : 0), y = cy - block / 2f;
+        for (String line : title) {
+            centered(g, line, cx, y + (title.size() > 1 ? 3.5f : 4.5f), tpx, Weight.SEMIBOLD, fg, room);
+            y += step;
+        }
         for (String line : lines) {
             centered(g, line, cx, y + 3, 11.5f, Weight.REGULAR, st.kind() == Action.State.Kind.OFF ? t.c("state.warn") : muted, room);
             y += 6.5f;
@@ -445,6 +505,14 @@ final class WheelScreen extends ScaledScreen {
         }
     }
 
+    private void button(GuiGraphics g, Theme t, String text, float cx, float by, float room, int mx, int my, Runnable click) {
+        float bw = Math.min(room, Draw.labelWidth(text, 12, Weight.MEDIUM) + 12), bh = 13, bx = cx - bw / 2f;
+        boolean hot = Kit.over(mx, my, (int) bx, (int) by, (int) bw, (int) bh);
+        Draw.roundBox(g, bx, by, bw, bh, 3.5f, hot ? t.c("wheel.hover") : t.c("wheel.tile"), t.c("wheel.line"));
+        centered(g, text, cx, by + bh / 2f, 12, Weight.MEDIUM, t.c("wheel.fg"), room);
+        hits.add((int) bx, (int) by, (int) bw, (int) bh, b -> click.run());
+    }
+
     private static void centered(GuiGraphics g, String s, float cx, float cy, float px, Weight w, int color, float room) {
         String text = Draw.ellipsize(s, room, px, w);
         Draw.label(g, text, cx - Draw.labelWidth(text, px, w) / 2f, cy, px, w, color);
@@ -452,12 +520,9 @@ final class WheelScreen extends ScaledScreen {
 
     private void keysHint(GuiGraphics g, Theme t, float cx, float y) {
         List<String[]> parts = new ArrayList<>();
-        if (list != null) {
-            parts.add(new String[] {"", Component.translatable("ryscore.wheel.hint.search").getString()});
+        if (!subs.isEmpty()) {
+            if (searchable()) parts.add(new String[] {"", Component.translatable("ryscore.wheel.hint.search").getString()});
             parts.add(new String[] {"Enter", Component.translatable("ryscore.wheel.hint.enter").getString()});
-            parts.add(new String[] {"Esc", Component.translatable("ryscore.wheel.hint.back").getString()});
-        } else if (nested != null) {
-            parts.add(new String[] {"1–8", Component.translatable("ryscore.wheel.hint.pick").getString()});
             parts.add(new String[] {"Esc", Component.translatable("ryscore.wheel.hint.back").getString()});
         } else {
             parts.add(new String[] {"1–8", Component.translatable("ryscore.wheel.hint.pick").getString()});
@@ -475,43 +540,63 @@ final class WheelScreen extends ScaledScreen {
         }
     }
 
-    // --- список рядом с колесом ---
+    // --- подменю рядом с колесом ---
 
-    private void list(GuiGraphics g, Theme t, float x, float y, int mx, int my) {
-        Action owner = list;
+    private void list(GuiGraphics g, Theme t, float cx, float cy, int mx, int my) {
+        Action owner = top();
         if (owner == null) return;
-        float w = LIST_W, h = Math.min(296, height - y - 6);
-        if (y < 6) {
-            h = Math.min(296, height - 12);
-            y = 6;
+        List<Action> rows = owner.sub();
+        boolean search = rows.size() >= SEARCH_FROM;
+        float w = LIST_W, pad = 7, footer = 18;
+        float head = 20 + (search ? 21 : 2);
+        // высота по всем строкам, а не по найденным: верхний край не прыгает при поиске
+        float content = 0;
+        String section = null;
+        for (Action a : rows) {
+            if (!a.section().isEmpty() && !a.section().equals(section)) {
+                content += 12;
+                section = a.section();
+            }
+            content += ROW_H;
         }
-        x = Math.min(x, width - w - 6);
+        float h = Math.min(Math.min(296, height - MARGIN * 2), head + Math.max(content, ROW_H) + footer + 3);
+        float x = WheelLayout.subX(cx, R + SUB_GAP, w, width, MARGIN), y = WheelLayout.subY(cy, h, height, MARGIN);
         listX = x;
         listY = y;
         listH = h;
         int fg = t.c("wheel.fg"), muted = t.c("wheel.muted"), line = t.c("wheel.line");
         Draw.shadow(g, x, y, w, h, 7, 0.6f);
         Draw.roundBox(g, x, y, w, h, 7, t.c("wheel.center"), line);
-        float pad = 7;
-        // шапка: значок, имя, число, Esc
-        float hy = y + 11;
-        Paint.icon(g, owner, x + pad, hy - 4, 8, fg);
-        String title = owner.label().getString();
-        Draw.label(g, title, x + pad + 11, hy, 14, Weight.SEMIBOLD, fg);
-        List<Action> rows = owner.list();
-        float tw = Draw.labelWidth(title, 14, Weight.SEMIBOLD);
-        Draw.label(g, Integer.toString(rows.size()), x + pad + 11 + tw + 4, hy, 12, Weight.MEDIUM, t.c("link"));
-        Paint.kbd(g, "Esc", x + w - pad - Paint.kbdWidth("Esc", 10.5f), hy, 10.5f, t.c("wheel.tile"), line, muted);
-        // поиск
-        float sy = y + 20, sh = 16;
-        Draw.roundBox(g, x + pad, sy, w - pad * 2, sh, 4, t.c("wheel.sector.off"), line);
-        Icons.draw(g, Icons.Shape.MAGNIFIER, x + pad + 5, sy + sh / 2f - 3.5f, 7, muted);
-        boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
-        if (query.isEmpty()) {
-            Draw.label(g, Component.translatable("ryscore.wheel.search").getString(), x + pad + 16, sy + sh / 2f, 12.5f, Weight.REGULAR, muted);
-        } else {
-            String q = Draw.ellipsize(query, w - pad * 2 - 24, 12.5f, Weight.REGULAR);
-            Draw.label(g, q + (blink ? "|" : ""), x + pad + 16, sy + sh / 2f, 12.5f, Weight.REGULAR, fg);
+        // шапка: «назад» внутри набора, значок, имя, число, Esc
+        float hy = y + 11, tx = x + pad;
+        if (subs.size() > 1) {
+            boolean hot = Kit.over(mx, my, (int) tx - 2, (int) hy - 7, 11, 14);
+            Icons.draw(g, Icons.Shape.CHEVRON_LEFT, tx - 1, hy - 3.5f, 7, hot ? fg : muted);
+            hits.add((int) tx - 2, (int) hy - 7, 11, 14, b -> back());
+            tx += 10;
+        }
+        Paint.icon(g, owner, tx, hy - 4, 8, fg);
+        String count = Integer.toString(rows.size());
+        float escW = Paint.kbdWidth("Esc", 10.5f), countW = Draw.labelWidth(count, 12, Weight.MEDIUM);
+        String title = Draw.ellipsize(owner.label().getString(), x + w - pad - escW - 8 - countW - 4 - (tx + 11), 14, Weight.SEMIBOLD);
+        Draw.label(g, title, tx + 11, hy, 14, Weight.SEMIBOLD, fg);
+        Draw.label(g, count, tx + 11 + Draw.labelWidth(title, 14, Weight.SEMIBOLD) + 4, hy, 12, Weight.MEDIUM, t.c("link"));
+        float ex = x + w - pad - escW;
+        boolean escHot = Kit.over(mx, my, (int) ex, (int) hy - 6, (int) escW, 12);
+        Paint.kbd(g, "Esc", ex, hy, 10.5f, escHot ? t.c("wheel.hover") : t.c("wheel.tile"), line, escHot ? fg : muted);
+        hits.add((int) ex, (int) hy - 6, (int) escW, 12, b -> back());
+        // поиск у длинных списков
+        if (search) {
+            float sy = y + 20, sh = 16;
+            Draw.roundBox(g, x + pad, sy, w - pad * 2, sh, 4, t.c("wheel.sector.off"), line);
+            Icons.draw(g, Icons.Shape.MAGNIFIER, x + pad + 5, sy + sh / 2f - 3.5f, 7, muted);
+            boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+            if (query.isEmpty()) {
+                Draw.label(g, Component.translatable("ryscore.wheel.search").getString(), x + pad + 16, sy + sh / 2f, 12.5f, Weight.REGULAR, muted);
+            } else {
+                String q = Draw.ellipsize(query, w - pad * 2 - 24, 12.5f, Weight.REGULAR);
+                Draw.label(g, q + (blink ? "|" : ""), x + pad + 16, sy + sh / 2f, 12.5f, Weight.REGULAR, fg);
+            }
         }
         // строки по разделам
         String needle = query.toLowerCase(Locale.ROOT);
@@ -519,17 +604,17 @@ final class WheelScreen extends ScaledScreen {
         for (Action a : rows) if (needle.isEmpty() || a.label().getString().toLowerCase(Locale.ROOT).contains(needle)) shown.add(a);
         shownRows = shown;
         selected = Math.min(selected, Math.max(0, shown.size() - 1));
-        float top = sy + sh + 5, footer = 18, bottom = y + h - footer;
-        float content = 0;
-        String section = null;
+        float top = y + head, bottom = y + h - footer;
+        float shownContent = 0;
+        section = null;
         for (Action a : shown) {
             if (!a.section().isEmpty() && !a.section().equals(section)) {
-                content += 12;
+                shownContent += 12;
                 section = a.section();
             }
-            content += ROW_H;
+            shownContent += ROW_H;
         }
-        float off = scroll.update(content - (bottom - top));
+        float off = scroll.update(shownContent - (bottom - top));
         Draw.scissor(g, (int) x, (int) top, (int) (x + w), (int) bottom);
         hits.clip((int) top, (int) bottom);
         float ry = top - off;
@@ -538,14 +623,14 @@ final class WheelScreen extends ScaledScreen {
             Action a = shown.get(i);
             if (!a.section().isEmpty() && !a.section().equals(section)) {
                 section = a.section();
-                int count = 0;
-                for (Action b : shown) if (section.equals(b.section())) count++;
+                int n = 0;
+                for (Action b : shown) if (section.equals(b.section())) n++;
                 Draw.label(g, section, x + pad + 2, ry + 6, 11, Weight.MEDIUM, muted);
-                String c = Integer.toString(count);
+                String c = Integer.toString(n);
                 Draw.label(g, c, x + w - pad - 2 - Draw.labelWidth(c, 11, Weight.MEDIUM), ry + 6, 11, Weight.MEDIUM, muted);
                 ry += 12;
             }
-            if (ry + ROW_H > top - 1 && ry < bottom + 1) row(g, t, a, i, x + pad - 2, ry, w - pad * 2 + 4, mx, my);
+            if (ry + ROW_H > top - 1 && ry < bottom + 1) row(g, t, a, i, x + pad - 2, ry, w - pad * 2 + 4, top, bottom, mx, my);
             ry += ROW_H;
         }
         hits.unclip();
@@ -563,9 +648,12 @@ final class WheelScreen extends ScaledScreen {
         hits.add((int) x, (int) bottom, (int) w, (int) footer, b -> Actions.openKeys(null));
     }
 
-    private void row(GuiGraphics g, Theme t, Action a, int index, float x, float y, float w, int mx, int my) {
-        boolean hot = Kit.over(mx, my, (int) x, (int) y, (int) w, (int) ROW_H);
-        if (hot && index != selected) selected = index;
+    private void row(GuiGraphics g, Theme t, Action a, int index, float x, float y, float w, float top, float bottom, int mx, int my) {
+        boolean hot = Kit.over(mx, my, (int) x, (int) y, (int) w, (int) ROW_H) && my >= top && my < bottom;
+        if (hot) {
+            if (index != selected) selected = index;
+            rowHot = a;
+        }
         Action.State st = a.state();
         boolean dim = !st.usable() && st.kind() != Action.State.Kind.PAUSE;
         if (index == selected) Draw.round(g, x, y + 0.5f, w, ROW_H - 1, 4, t.c("wheel.hover"));
@@ -576,6 +664,10 @@ final class WheelScreen extends ScaledScreen {
         else Paint.icon(g, a, pcx - 4, pcy - 4, 8, 0xFF1C1F27);
         int fg = dim ? t.c("wheel.muted") : t.c("wheel.fg");
         float right = x + w - 4;
+        if (a.opensSub()) {
+            Icons.draw(g, Icons.Shape.CHEVRON_RIGHT, right - 6, pcy - 3, 6, t.c("wheel.muted"));
+            right -= 10;
+        }
         String r = st.kind() == Action.State.Kind.PAUSE ? st.clock() : a.right();
         if (!r.isEmpty()) {
             Draw.label(g, r, right - Draw.labelWidth(r, 11, Weight.REGULAR), pcy, 11, Weight.REGULAR, t.c("wheel.muted"));
@@ -590,7 +682,7 @@ final class WheelScreen extends ScaledScreen {
         }
         Draw.label(g, Draw.ellipsize(a.label().getString(), right - x - 20, 13, Weight.REGULAR), x + 18, pcy, 13, Weight.REGULAR, fg);
         hits.add((int) x, (int) y, (int) w, (int) ROW_H, btn -> {
-            if (btn == 0) perform(a);
+            if (btn == 0) perform(a, true);
         });
     }
 
