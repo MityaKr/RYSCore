@@ -2,7 +2,7 @@
 
 Собрана `_shared/tools/make-map.py` 2026-11-20. Руками не править: после структурных правок пересобрать.
 
-Java: 84 файлов, 16792 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
+Java: 84 файлов, 16862 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
 Читать сначала: `CLAUDE.md`, `README.md`.
 
 ## Точки входа
@@ -11,10 +11,10 @@ Java: 84 файлов, 16792 строк. Модули gradle: `common`. Пере
 - миксины: `neoforge/src/main/resources/ryscore.mixins.json`
 
 ## Папки
-- `common/` — 496 файлов
+- `common/` — 503 файлов
 - `docs/` — 1 файлов
 - `gradle/` — 2 файлов
-- `neoforge/` — 338 файлов
+- `neoforge/` — 344 файлов
 - `repo/` — 515 файлов
 
 ## `common/src/main/java` — пакет `works.repka.ryscore`
@@ -34,8 +34,8 @@ Java: 84 файлов, 16792 строк. Модули gradle: `common`. Пере
 - `KeysScreen` 684 — Окно «Клавиши» (1.14, макет essentials/img/03_keys.png): слева действия по группам со своей клавишей и сектором колеса, справа колесо выбранного кольца, клавиша колеса и её режим, …
 - `Paint` 57 — Общие кусочки колеса и окна клавиш: значок действия и плашка клавиши.
 - `Ring` 133 — Кольцо колеса быстрых действий (1.14): восемь секторов.
-- `WheelLayout` 110 — Чистая часть колеса (1.16): сколько места у подписи в секторе, как подпись сокращается, с какой стороны встаёт подменю и когда его открывает наведение.
-- `WheelScreen` 703 — Колесо быстрых действий (1.14, макеты essentials/img/01_wheel.png, 02_wheel_places.png).
+- `WheelLayout` 133 — Чистая часть колеса (1.16): сколько места у подписи в секторе, как подпись сокращается, с какой стороны встаёт подменю и когда его открывает наведение.
+- `WheelScreen` 726 — Колесо быстрых действий (1.14, макеты essentials/img/01_wheel.png, 02_wheel_places.png).
 
 **claims** (1)
 - `ClaimsApi` 146 — Земля для модов семьи (1.11).
@@ -119,7 +119,7 @@ Java: 84 файлов, 16792 строк. Модули gradle: `common`. Пере
 - `ActionStateTest` 26
 - `IntroGateTest` 102
 - `RingLayoutTest` 59 — Раскладка колец: умолчания, подсказки, запасные и сохранённое игроком.
-- `WheelLayoutTest` 106 — Колесо 1.16: сокращение подписи, место в секторе, сторона подменю, наведение по режиму.
+- `WheelLayoutTest` 130 — Колесо 1.16: сокращение подписи, место в секторе, сторона подменю, наведение по режиму.
 
 **migrate** (2)
 - `MigrationsTest` 300

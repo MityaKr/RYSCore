@@ -77,6 +77,30 @@ class WheelLayoutTest {
     }
 
     @Test
+    void subMarkStaysClearOfIconAndLabel() {
+        for (int i = 0; i < 8; i++) {
+            double a = Math.toRadians(-90 + i * 45);
+            float cr = WheelLayout.contentRadius(i, IR, R);
+            float x = (float) Math.cos(a) * cr, y = (float) Math.sin(a) * cr;
+            float top = y - 17, tile = 19, ly = top + tile + 6;
+            float room = WheelLayout.labelRoom(i, x, ly, 7, IR, R, GAP, 2.5f);
+            for (int k = -1; k <= 1; k++) {
+                float[] p = WheelLayout.polar(i, WheelLayout.markDeg(i) + k * WheelLayout.MARK_STEP_DEG, R - 6);
+                // шеврон 5×5 в середине, точки набора по краям, целиком в секторе
+                float half = k == 0 ? 2.5f : 1.2f;
+                assertTrue(WheelLayout.rectInside(i, p[0], p[1], half, half * 2, IR, R, GAP, 0.5f), "сектор " + i + " вне");
+                // не на плашке значка (с числом над правым углом) и не на названии
+                assertFalse(overlap(p[0], p[1], 2.5f, x - tile / 2f, top - 3, x + tile / 2f + 4, top + tile), "сектор " + i + " на значке");
+                assertFalse(overlap(p[0], p[1], 2.5f, x - room / 2f, ly - 3.5f, x + room / 2f, ly + 3.5f), "сектор " + i + " на названии");
+            }
+        }
+    }
+
+    private static boolean overlap(float px, float py, float h, float x0, float y0, float x1, float y1) {
+        return px + h > x0 && px - h < x1 && py + h > y0 && py - h < y1;
+    }
+
+    @Test
     void submenuGoesRightThenLeft() {
         // колесо по центру экрана 640: справа помещается
         assertEquals(320 + 102, WheelLayout.subX(320, 102, 160, 640, 6));

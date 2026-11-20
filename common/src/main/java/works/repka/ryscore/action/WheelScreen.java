@@ -28,6 +28,7 @@ import works.repka.ryscore.ui.Type.Weight;
  *   <li>нажать и отпустить: колесо остаётся, выбор кликом, в середине «Настроить»;</li>
  *   <li>1–8 выбирают сектор, колесо мыши и Tab листают кольца, Esc закрывает;</li>
  *   <li>в секторе только значок и короткое название, подпись наведённого сектора или строки видна в середине (1.16);</li>
+ *   <li>сектор с подменю отмечен у края: шеврон у списка, три точки у набора действий;</li>
  *   <li>сектор с подменю («Перенести…», «Места сервера», «Пинг команде») открывает его панелью рядом, колесо остаётся на месте
  *       (1.16): по клику или клавише, а наведением только в режиме «по зажатию». Esc и «Назад» закрывают подменю, второй Esc колесо.</li>
  * </ul>
@@ -403,7 +404,7 @@ final class WheelScreen extends ScaledScreen {
     private void sectorContent(GuiGraphics g, Theme t, int i, @Nullable Action a, float cx, float cy) {
         double rad = Math.toRadians(-90 + i * 45);
         // в верхней половине значок с подписью чуть дальше от середины: подпись под значком уходит в широкую часть сектора
-        float ir = (R + IR) / 2f - 5 * Math.min(0, (float) Math.sin(rad));
+        float ir = WheelLayout.contentRadius(i, IR, R);
         float x = cx + (float) Math.cos(rad) * ir, y = cy + (float) Math.sin(rad) * ir;
         float nx = cx + (float) Math.cos(rad) * (R + 7.5f), ny = cy + (float) Math.sin(rad) * (R + 7.5f);
         String n = Integer.toString(i + 1);
@@ -425,6 +426,7 @@ final class WheelScreen extends ScaledScreen {
             Draw.round(g, x + tile / 2f - bw / 2f - 1, top - 3, bw, 9, 4.5f, t.c("wheel.hover"));
             Draw.label(g, b, x + tile / 2f - 1 - Draw.labelWidth(b, 10, Weight.SEMIBOLD) / 2f, top + 1.5f, 10, Weight.SEMIBOLD, t.c("wheel.fg"));
         }
+        subMark(g, t, i, a, cx, cy, on && !dim, dim);
         float ly = top + tile + 6;
         float room = WheelLayout.labelRoom(i, x - cx, ly - cy, LABEL_H, IR, R, GAP, LABEL_PAD);
         WheelLayout.Fit fit = WheelLayout.fit(a.label().getString(), a.shortLabel().getString(), room,
@@ -434,6 +436,27 @@ final class WheelScreen extends ScaledScreen {
             String c = st.clock();
             Draw.label(g, c, x - Draw.labelWidth(c, 11, Weight.REGULAR) / 2f, top + tile + 13, 11, Weight.REGULAR, t.c("wheel.fg"));
         }
+    }
+
+    /**
+     * Тихий знак подменю у внешнего края сектора (просьба автора 20.11): список («Места сервера», «Пинг команде») — шеврон
+     * в сторону, где встанет панель; набор действий («Перенести…», бывший второй круг) — три точки по дуге.
+     */
+    private void subMark(GuiGraphics g, Theme t, int i, Action a, float cx, float cy, boolean on, boolean dim) {
+        if (!a.opensSub()) return;
+        int c = on ? t.c("wheel.fg") : t.c("wheel.muted");
+        if (dim) c = Draw.alpha(c, 0.6f);
+        float r = R - 6;
+        if (a.opensNested()) {
+            for (int k = -1; k <= 1; k++) {
+                float[] p = WheelLayout.polar(i, WheelLayout.markDeg(i) + k * WheelLayout.MARK_STEP_DEG, r);
+                Draw.disc(g, cx + p[0], cy + p[1], 1.1f, c);
+            }
+            return;
+        }
+        float[] p = WheelLayout.polar(i, WheelLayout.markDeg(i), r);
+        boolean left = WheelLayout.subX(cx, R + SUB_GAP, LIST_W, width, MARGIN) < cx;
+        Icons.draw(g, left ? Icons.Shape.CHEVRON_LEFT : Icons.Shape.CHEVRON_RIGHT, cx + p[0] - 2.5f, cy + p[1] - 2.5f, 5, c);
     }
 
     private void center(GuiGraphics g, Theme t, float cx, float cy, @Nullable Action a, int mx, int my) {

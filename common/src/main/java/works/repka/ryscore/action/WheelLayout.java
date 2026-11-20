@@ -99,6 +99,29 @@ final class WheelLayout {
         return Math.max(margin, Math.min(y, screenH - margin - h));
     }
 
+    /** Угол знака подменю от середины сектора и шаг точек набора. */
+    static final float MARK_DEG = 16, MARK_STEP_DEG = 3.5f;
+
+    /**
+     * Угол знака подменю от середины сектора, по часовой: у внешнего края в верхнем углу сектора, подальше от названия
+     * под значком (справа против часовой, слева по часовой, сверху и снизу правый угол).
+     */
+    static float markDeg(int sector) {
+        int s = Math.floorMod(sector, 8);
+        return s >= 1 && s <= 4 ? -MARK_DEG : MARK_DEG;
+    }
+
+    /** Точка на радиусе {@code r} под углом {@code offsetDeg} от середины сектора {@code sector}, от центра колеса. */
+    static float[] polar(int sector, float offsetDeg, float r) {
+        double a = Math.toRadians(-90 + sector * 45.0 + offsetDeg);
+        return new float[] {(float) (Math.cos(a) * r), (float) (Math.sin(a) * r)};
+    }
+
+    /** Смещение значка с названием от середины кольца: в верхней половине чуть наружу, где сектор шире. */
+    static float contentRadius(int sector, float ir, float r) {
+        return (r + ir) / 2f - 5 * Math.min(0, (float) Math.sin(Math.toRadians(-90 + sector * 45.0)));
+    }
+
     /**
      * Открывает ли задержка мыши на секторе его подменю. Только в режиме «по зажатию»: в режиме «по нажатию» наведение
      * лишь подсвечивает, подменю открывает клик (автор, 20.11.2026).
