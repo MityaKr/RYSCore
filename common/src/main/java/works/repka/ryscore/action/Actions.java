@@ -521,6 +521,11 @@ public final class Actions {
         keyMods = mods;
     }
 
+    /** Модификатор клавиши игры во флагах GLFW (0 без модификатора). */
+    static int modsOf(KeyMapping k) {
+        return keyMods.applyAsInt(k);
+    }
+
     /** Пересекаются ли контексты двух клавиш игры (NeoForge {@code KeyConflictContext}). Ставит загрузчик. С 1.15. */
     public static void keyContexts(BiPredicate<KeyMapping, KeyMapping> clash) {
         contextClash = clash;

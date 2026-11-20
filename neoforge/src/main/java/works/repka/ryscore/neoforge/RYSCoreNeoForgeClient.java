@@ -39,6 +39,7 @@ import works.repka.ryscore.RYSCore;
 import works.repka.ryscore.action.Actions;
 import works.repka.ryscore.action.Answers;
 import works.repka.ryscore.action.Binding;
+import works.repka.ryscore.action.KeyDefaults;
 import works.repka.ryscore.dock.DockButton;
 import works.repka.ryscore.ui.Icons;
 import net.minecraft.network.chat.Component;
@@ -94,6 +95,7 @@ public final class RYSCoreNeoForgeClient {
         Actions.coversDock(KEYS_TILE);
         IEventBus bus = NeoForge.EVENT_BUS;
         bus.addListener((ClientTickEvent.Post e) -> {
+            KeyDefaults.apply();
             Actions.clientTick();
             Answers.clientTick();
         });
@@ -113,6 +115,10 @@ public final class RYSCoreNeoForgeClient {
      */
     private static void noticeHooks() {
         IEventBus bus = NeoForge.EVENT_BUS;
+        // боссбары сверху по центру: уведомления «по центру» встают под последним (полоса высотой 5 под строкой имени)
+        bus.addListener(EventPriority.LOWEST, (net.neoforged.neoforge.client.event.CustomizeGuiOverlayEvent.BossEventProgress e) -> {
+            if (!e.isCanceled()) Notices.bossBar(e.getY() + 5);
+        });
         bus.addListener(EventPriority.HIGHEST, (ScreenEvent.MouseButtonPressed.Pre e) -> {
             if (Notices.click(e.getMouseX(), e.getMouseY(), e.getButton())) {
                 noticePress = true;

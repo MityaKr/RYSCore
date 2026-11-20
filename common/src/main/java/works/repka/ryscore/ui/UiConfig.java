@@ -27,6 +27,8 @@ final class UiConfig {
     /** Звук уведомлений семьи и его громкость в процентах: по умолчанию включён и обычной громкости. */
     boolean noticeSound = true;
     int noticeVolume = 100;
+    /** Где стоят уведомления семьи (1.17): справа под зоной карты, по центру, слева. */
+    Notices.Place noticePlace = Notices.Place.RIGHT;
     /** Разовые подсказки, которые игрок уже видел ({@link Onboarding}), с 1.15. */
     java.util.Set<String> seen = new java.util.LinkedHashSet<>();
 

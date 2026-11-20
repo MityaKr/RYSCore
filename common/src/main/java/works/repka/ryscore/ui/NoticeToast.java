@@ -45,6 +45,10 @@ final class NoticeToast implements Toast {
     private double layoutPixels = -1;
     private int layoutCount = -1;
     private float[] cross;
+    /** Место в колонке тостов игры и верх своего места (1.17): выше верха карточка обрезается, пока выезжает и уходит. */
+    int slot = -1;
+    private float top = -1, stackY = Float.NaN;
+    private long stackAt;
     private final List<float[]> buttonHits = new ArrayList<>();
 
     NoticeToast(Notice notice) {
@@ -93,6 +97,23 @@ final class NoticeToast implements Toast {
         return UiScale.toGui(units * zoom());
     }
 
+    /** Место «справа»: колонка тостов игры, верх места {@code top}. */
+    void placed(int index, float top) {
+        slot = index;
+        this.top = top;
+        stackY = top;
+    }
+
+    /** Место в своей стопке («по центру», «слева»): подъезжает к {@code target} плавно, когда карточка выше ушла. */
+    float stackTo(int index, float target) {
+        long now = Util.getMillis();
+        stackY = slot < 0 ? target : NoticePlace.approach(stackY, target, now - stackAt);
+        stackAt = now;
+        slot = index;
+        top = stackY;
+        return stackY;
+    }
+
     int[] bounds() {
         Layout l = layout();
         return new int[] {Math.round(gx), Math.round(gy), (int) Math.ceil(gui(l.w)), (int) Math.ceil(gui(l.h))};
@@ -101,7 +122,7 @@ final class NoticeToast implements Toast {
     boolean contains(double x, double y) {
         if (!onScreen() || Minecraft.getInstance().screen == null) return false;
         Layout l = layout();
-        return x >= gx && y >= gy && x < gx + gui(l.w) && y < gy + gui(l.h);
+        return x >= gx && y >= Math.max(gy, top) && x < gx + gui(l.w) && y < gy + gui(l.h);
     }
 
     boolean click(double x, double y, int button) {
@@ -169,7 +190,7 @@ final class NoticeToast implements Toast {
             double mx = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
             double my = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
             Layout l = layout();
-            hover = mx >= gx && my >= gy && mx < gx + gui(l.w) && my < gy + gui(l.h);
+            hover = mx >= gx && my >= Math.max(gy, top) && mx < gx + gui(l.w) && my < gy + gui(l.h);
         }
         if (hover) {
             hovered = true;
@@ -185,13 +206,20 @@ final class NoticeToast implements Toast {
         long age = now - first;
         float z = zoom(), shift = (float) UiScale.fromGui(width()) / z - W;
         boolean lit = hover;
-        UiScale.render(g, s -> {
-            s.pose().pushPose();
-            s.pose().scale(z, z, 1f);
-            s.pose().translate(shift, 0, 0);
-            draw(s, ThemeManager.get(), lit, age);
-            s.pose().popPose();
-        });
+        // выезд сверху: выше верха своего места карточку не видно (место под картой, боссбаром или соседом)
+        boolean clip = top >= 0 && gy < top;
+        if (clip) g.enableScissor(0, (int) Math.floor(top), g.guiWidth(), g.guiHeight());
+        try {
+            UiScale.render(g, s -> {
+                s.pose().pushPose();
+                s.pose().scale(z, z, 1f);
+                s.pose().translate(shift, 0, 0);
+                draw(s, ThemeManager.get(), lit, age);
+                s.pose().popPose();
+            });
+        } finally {
+            if (clip) g.disableScissor();
+        }
         if (gone) Notices.finished(this);
         return gone ? Visibility.HIDE : Visibility.SHOW;
     }

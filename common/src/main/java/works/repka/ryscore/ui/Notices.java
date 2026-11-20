@@ -11,15 +11,23 @@ import net.minecraft.sounds.SoundEvents;
 import works.repka.ryscore.RYSCore;
 
 /**
- * Общие уведомления семьи (1.9.2). Каждое уведомление — настоящий тост игры ({@link Toast}): оно стоит в правом верхнем углу
- * в той же колонке, что тосты игры и FTB Quests, игра сама складывает их по местам, рисует поверх мира, открытых окон и чужих
- * панелей и прячет на F1. Ядро добавляет к этому вид по теме, паузу при наведении, клик и крестик в открытом окне,
+ * Общие уведомления семьи (1.9.2). Каждое уведомление — настоящий тост игры ({@link Toast}): очередь и места даёт колонка
+ * тостов игры, она рисует их поверх мира, открытых окон и чужих панелей и прячет на F1. С 1.17 место выбирает игрок
+ * ({@link #place()}): справа (по умолчанию) колонка тостов встаёт под зону карты ядра ({@link Anchors}), по центру и слева
+ * уведомления семьи идут своей стопкой (по центру под боссбарами). Уведомление выезжает сверху вниз и уходит вверх. Ядро добавляет к этому вид по теме, паузу при наведении, клик и крестик в открытом окне,
  * клавишу мода в мире ({@link #press}), сводку для серии и свои звуки вместо шороха тоста игры.
  *
  * <p>Моды друг о друге не знают: каждый отдаёт {@link Notice} со своим источником. Правило семьи: своих тостов
  * в других местах экрана моды не рисуют.
  */
 public final class Notices {
+    /**
+     * Где стоят уведомления (1.17, {@code config/ryscore/ui.json}, поле {@code noticePlace}). Справа: колонка тостов игры
+     * под зоной карты, если карта в правом верхнем углу. По центру: под боссбарами; подсказка Jade по умолчанию тоже сверху
+     * по центру и может лечь рядом. Слева: под зоной карты, если карта в левом верхнем углу.
+     */
+    public enum Place { RIGHT, CENTER, LEFT }
+
     /** Сколько карточек источника видно до того, как следующие сложатся в сводку; в низком окне — одна. */
     private static final int CARDS_BEFORE_SUMMARY = 2;
     private static final int LOW_WINDOW = 540;
@@ -148,7 +156,60 @@ public final class Notices {
         return Math.max(0, Math.min(100, UiConfig.get().noticeVolume)) / 100f;
     }
 
+    /** Место уведомлений, выбранное игроком. */
+    public static Place place() {
+        Place p = UiConfig.get().noticePlace;
+        return p == null ? Place.RIGHT : p;
+    }
+
+    public static void setPlace(Place place) {
+        if (UiConfig.get().noticePlace == place) return;
+        UiConfig.get().noticePlace = java.util.Objects.requireNonNull(place);
+        UiConfig.save();
+    }
+
     // --- для загрузчика ---
+
+    private static long bossFrame = -1;
+    private static int bossBottom;
+
+    /** Нижний край боссбара, нарисованного в этом кадре, в единицах GUI игры: уведомления по центру встают ниже. */
+    public static void bossBar(int bottom) {
+        long frame = Minecraft.getInstance().getFrameTimeNs();
+        if (frame != bossFrame) {
+            bossFrame = frame;
+            bossBottom = 0;
+        }
+        bossBottom = Math.max(bossBottom, bottom);
+    }
+
+    private static int bossBottom() {
+        return bossFrame == Minecraft.getInstance().getFrameTimeNs() ? bossBottom : 0;
+    }
+
+    /**
+     * Место тоста игры в колонке: колонка поставила его в {@code (x, y)} (выезд справа, место {@code index}), ядро
+     * возвращает, куда его поставить на самом деле. Уведомление семьи стоит по выбору игрока и выезжает сверху; чужой тост
+     * при месте «справа» сдвигается под зону карты вместе с колонкой, иначе остаётся где был.
+     */
+    public static float[] toastAt(Toast toast, int screenW, int index, float x, float y) {
+        Place place = place();
+        boolean notice = toast instanceof NoticeToast;
+        if (place == Place.RIGHT) {
+            float base = NoticePlace.base((float) UiScale.toGui(Anchors.topInset(Anchors.Corner.TOP_RIGHT)));
+            if (!notice) return new float[] {x, y + base};
+            NoticeToast n = (NoticeToast) toast;
+            float top = base + index * NoticePlace.SLOT;
+            n.placed(index, top);
+            return new float[] {NoticePlace.x(place, screenW, toast.width()), NoticePlace.slide(top, toast.height(), NoticePlace.progress(screenW, toast.width(), x))};
+        }
+        if (!notice) return new float[] {x, y};
+        NoticeToast n = (NoticeToast) toast;
+        float zone = place == Place.CENTER ? bossBottom() : (float) UiScale.toGui(Anchors.topInset(Anchors.Corner.TOP_LEFT));
+        int[] above = ACTIVE.stream().filter(t -> t != n && t.slot >= 0 && t.slot < index && t.onScreen()).mapToInt(NoticeToast::height).toArray();
+        float top = n.stackTo(index, NoticePlace.stack(NoticePlace.base(zone), above));
+        return new float[] {NoticePlace.x(place, screenW, toast.width()), NoticePlace.slide(top, toast.height(), NoticePlace.progress(screenW, toast.width(), x))};
+    }
 
     /**
      * Нажатие мыши в открытом окне, координаты в единицах GUI игры.
