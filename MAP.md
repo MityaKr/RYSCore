@@ -1,8 +1,8 @@
 # Карта проекта RYSCore
 
-Собрана `_shared/tools/make-map.py` 2026-11-20. Руками не править: после структурных правок пересобрать.
+Собрана `_shared/tools/make-map.py` 2026-11-23. Руками не править: после структурных правок пересобрать.
 
-Java: 88 файлов, 17187 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
+Java: 92 файлов, 17370 строк. Модули gradle: `common`. Переводы: `common/src/main/resources/assets/ryscore/lang/en_us.json`, `common/src/main/resources/assets/ryscore/lang/ru_ru.json`.
 Читать сначала: `CLAUDE.md`, `README.md`.
 
 ## Точки входа
@@ -11,7 +11,7 @@ Java: 88 файлов, 17187 строк. Модули gradle: `common`. Пере
 - миксины: `neoforge/src/main/resources/ryscore.mixins.json`
 
 ## Папки
-- `common/` — 547 файлов
+- `common/` — 562 файлов
 - `docs/` — 1 файлов
 - `gradle/` — 2 файлов
 - `neoforge/` — 378 файлов
@@ -116,11 +116,15 @@ Java: 88 файлов, 17187 строк. Модули gradle: `common`. Пере
 
 ## `common/src/test/java` — пакет `works.repka.ryscore`
 
-**action** (6)
+**(корень)** (1)
+- `DocExample` 31 — JSON examples from docs/for-mods.md: the block after the marker ...
+
+**action** (7)
 - `ActionConfigTest` 51 — Файл клавиш игрока: чтение, запись, битый файл, короткая запись кольца.
 - `ActionStateTest` 26
 - `IntroGateTest` 102
 - `KeyDefaultsTest` 17
+- `KeysDocExampleTest` 30 — The keys.json example in docs/for-mods.md is read by ActionConfig.
 - `RingLayoutTest` 59 — Раскладка колец: умолчания, подсказки, запасные и сохранённое игроком.
 - `WheelLayoutTest` 130 — Колесо 1.16: сокращение подписи, место в секторе, сторона подменю, наведение по режиму.
 
@@ -132,9 +136,13 @@ Java: 88 файлов, 17187 строк. Модули gradle: `common`. Пере
 - `PermsTest` 38 — Узлы прав: имена, повторное объявление, старшинство ролей.
 - `RolesCacheTest` 48 — Кэш ролей: один вопрос поставщику на игрока, сброс по игроку и целиком, смена поставщика сбрасывает.
 
-**ui** (2)
+**theme** (1)
+- `ThemeDocExampleTest` 83 — The theme and migrate flag examples in docs/for-mods.md are read by the core as the document says.
+
+**ui** (3)
 - `NoticePlaceTest` 51
 - `PendingTest` 65
+- `UiDocExampleTest` 39 — The ui.json example in docs/for-mods.md is read by UiConfig, and a partial file keeps the defaults.
 
 **world** (1)
 - `LabelsPickTest` 36 — Общий отбор подписей: отсечка, сначала пинги, потом цели, потом ближние, предел.
