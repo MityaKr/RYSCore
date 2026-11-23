@@ -347,12 +347,12 @@ final class WheelScreen extends ScaledScreen {
             }
         }
         float cx = cx(), cy = cy();
-        if (rings.size() > 1) ringTabs(g, t, cx, cy - R - 20, mx, my);
+        if (rings.size() > 1) ringTabs(g, t, cx, WheelLayout.tabsY(cy, R), mx, my);
         for (int i = 0; i < Ring.SECTORS; i++) sector(g, t, i, slots.get(i), cx, cy);
         for (int i = 0; i < Ring.SECTORS; i++) sectorContent(g, t, i, slots.get(i), cx, cy);
         Action info = row != null && !subs.isEmpty() ? row : hovered >= 0 ? slots.get(hovered) : null;
         center(g, t, cx, cy, info, mx, my);
-        keysHint(g, t, cx, cy + R + 19);
+        keysHint(g, t, cx, cy + WheelLayout.hintOffset(R));
         if (!subs.isEmpty()) list(g, t, cx, cy, mx, my);
     }
 
@@ -406,9 +406,15 @@ final class WheelScreen extends ScaledScreen {
         // в верхней половине значок с подписью чуть дальше от середины: подпись под значком уходит в широкую часть сектора
         float ir = WheelLayout.contentRadius(i, IR, R);
         float x = cx + (float) Math.cos(rad) * ir, y = cy + (float) Math.sin(rad) * ir;
-        float nx = cx + (float) Math.cos(rad) * (R + 7.5f), ny = cy + (float) Math.sin(rad) * (R + 7.5f);
-        String n = Integer.toString(i + 1);
-        Draw.label(g, n, nx - Draw.labelWidth(n, 11, Weight.MEDIUM) / 2f, ny, 11, Weight.MEDIUM, t.c("wheel.muted"));
+        // клавиша сектора плашкой, как «1–8» в подсказке снизу; у пустого сектора её нет: нажимать нечего
+        if (a != null) {
+            float kr = WheelLayout.keyRadius(R);
+            float nx = cx + (float) Math.cos(rad) * kr, ny = cy + (float) Math.sin(rad) * kr;
+            String n = Integer.toString(i + 1);
+            boolean hot = i == hovered || same(root(), a);
+            Paint.kbd(g, n, nx - Paint.kbdWidth(n, 10.5f) / 2f, ny, 10.5f, t.c("wheel.center"), t.c("wheel.line"),
+                hot ? t.c("wheel.fg") : t.c("wheel.muted"));
+        }
         if (a == null) return;
         Action.State st = a.state();
         boolean dim = !st.usable() && st.kind() != Action.State.Kind.PAUSE;

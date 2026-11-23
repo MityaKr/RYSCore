@@ -99,6 +99,33 @@ final class WheelLayout {
         return Math.max(margin, Math.min(y, screenH - margin - h));
     }
 
+    /**
+     * Клавиша сектора (1.17.2, отзыв автора 23.11): цифра 1–8 за внешним краем сектора рисуется плашкой клавиши, как «1–8»
+     * в подсказке снизу, чтобы было видно, что это клавиша. Центр плашки на {@code r + KEY_GAP}, высота {@code KEY_H}.
+     */
+    static final float KEY_GAP = 9, KEY_H = 8;
+    /** Высота плашки вкладок колец («Моё | Оператор») и зазор от неё до плашки клавиши верхнего сектора. */
+    static final float TABS_H = 16, TABS_CLEAR = 4;
+
+    /** Радиус центра плашки клавиши сектора. */
+    static float keyRadius(float r) {
+        return r + KEY_GAP;
+    }
+
+    /**
+     * Верх строки вкладок колец (текст плашки, сама подложка начинается на 2 выше). Над клавишей верхнего сектора с
+     * зазором: раньше цифра «1» заезжала на подложку вкладок и висела между «Моё» и «Оператор».
+     */
+    static float tabsY(float cy, float r) {
+        float keyTop = cy - keyRadius(r) - KEY_H / 2f;
+        return keyTop - TABS_CLEAR - (TABS_H - 2);
+    }
+
+    /** Центр строки подсказок клавиш под колесом, от его середины: под плашкой клавиши нижнего сектора с тем же зазором. */
+    static float hintOffset(float r) {
+        return keyRadius(r) + KEY_H / 2f + TABS_CLEAR + 9;
+    }
+
     /** Угол знака подменю от середины сектора и шаг точек набора. */
     static final float MARK_DEG = 16, MARK_STEP_DEG = 3.5f;
 

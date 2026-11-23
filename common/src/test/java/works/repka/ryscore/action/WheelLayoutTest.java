@@ -126,4 +126,24 @@ class WheelLayoutTest {
         assertFalse(WheelLayout.hoverOpens(true, true, false, 500), "уже открыто");
         assertFalse(WheelLayout.hoverOpens(true, false, true, 500), "закрыто Esc на этом секторе");
     }
+
+    /** Отзыв автора 23.11: цифра «1» висела на вкладках колец. Плашка вкладок кончается выше клавиши верхнего сектора. */
+    @Test
+    void ringTabsClearTopSectorKey() {
+        float cy = 194;
+        float tabsBottom = WheelLayout.tabsY(cy, R) - 2 + WheelLayout.TABS_H;
+        float keyTop = cy - WheelLayout.keyRadius(R) - WheelLayout.KEY_H / 2f;
+        assertTrue(tabsBottom + WheelLayout.TABS_CLEAR <= keyTop + 0.001f, tabsBottom + " / " + keyTop);
+        assertTrue(cy - WheelLayout.keyRadius(R) + WheelLayout.KEY_H / 2f < cy - R, "плашка клавиши за внешним краем колеса");
+        assertTrue(WheelLayout.tabsY(cy, R) - 2 >= 0, "вкладки на экране 640×400");
+    }
+
+    /** Строка подсказок не налезает на клавишу нижнего сектора. */
+    @Test
+    void hintClearsBottomSectorKey() {
+        float keyBottom = WheelLayout.keyRadius(R) + WheelLayout.KEY_H / 2f;
+        float hintTop = WheelLayout.hintOffset(R) - 9 / 2f;
+        assertTrue(hintTop - keyBottom >= WheelLayout.TABS_CLEAR, hintTop + " / " + keyBottom);
+        assertTrue(194 + WheelLayout.hintOffset(R) + 6 < 400, "подсказка на экране 640×400");
+    }
 }
