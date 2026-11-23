@@ -39,7 +39,7 @@ final class ActionConfig {
             try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
                 config = GSON.fromJson(reader, ActionConfig.class);
             } catch (IOException | RuntimeException e) {
-                LoggerFactory.getLogger(ActionConfig.class).warn("Клавиши семьи не прочитаны: {}", e.toString());
+                LoggerFactory.getLogger(ActionConfig.class).warn("Family keys not read: {}", e.toString());
             }
         }
         if (config == null) config = new ActionConfig();
@@ -57,7 +57,7 @@ final class ActionConfig {
                 GSON.toJson(this, writer);
             }
         } catch (IOException e) {
-            LoggerFactory.getLogger(ActionConfig.class).warn("Клавиши семьи не сохранены: {}", e.toString());
+            LoggerFactory.getLogger(ActionConfig.class).warn("Family keys not saved: {}", e.toString());
         }
     }
 

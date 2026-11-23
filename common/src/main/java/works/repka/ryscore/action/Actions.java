@@ -148,7 +148,7 @@ public final class Actions {
                 Collection<Action> list = p.get();
                 if (list != null) for (Action a : list) out.putIfAbsent(a.id(), a);
             } catch (RuntimeException e) {
-                RYSCore.LOG.warn("Поставщик действий упал: {}", e.toString());
+                RYSCore.LOG.warn("Action provider failed: {}", e.toString());
             }
         }
         for (Action a : dockActions()) out.putIfAbsent(a.id(), a);

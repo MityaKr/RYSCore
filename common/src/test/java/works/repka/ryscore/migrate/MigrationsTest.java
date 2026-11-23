@@ -180,7 +180,11 @@ class MigrationsTest {
         assertEquals(Migrations.Status.DONE, o.status());
         assertEquals(Migrations.Status.ALREADY_DONE, Migrations.runManual("claims", game, world, null).status());
         assertEquals(List.of("claims"), ran);
-        assertEquals(Migrations.Status.FAILED, Migrations.runManual("nope", game, world, null).status());
+        Migrations.Outcome nope = Migrations.runManual("nope", game, world, null);
+        assertEquals(Migrations.Status.FAILED, nope.status());
+        // 1.17.1: лог и message() по-английски, чат берёт ключ ryscore.migrate.note.no_step
+        assertEquals("nope: failed: no such step", nope.toString());
+        assertEquals("no such step", nope.message());
     }
 
     @Test
@@ -222,7 +226,7 @@ class MigrationsTest {
             }
         });
         assertEquals(Migrations.Status.PARTIAL, run().outcome("teams").status());
-        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.contains("частично") && l.contains("b.snbt")));
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.contains("partial ") && l.contains("b.snbt")));
         // отметки «сделано» нет: шаг повторяется и при запуске, и командой
         assertEquals(Migrations.Status.PARTIAL, run().outcome("teams").status());
         assertEquals(Migrations.Status.PARTIAL, Migrations.runManual("teams", game, world, null).status());
@@ -232,7 +236,7 @@ class MigrationsTest {
         assertEquals(Migrations.Status.DONE, run().outcome("teams").status());
         assertEquals(Migrations.Status.ALREADY_DONE, run().outcome("teams").status());
         assertEquals(4, ran.size());
-        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("teams") && l.contains("сделан ") && !l.contains("частично")));
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("teams") && l.contains("done ") && !l.contains("partially")));
     }
 
     @Test
@@ -252,7 +256,7 @@ class MigrationsTest {
         });
         assertEquals(Migrations.Status.PARTIAL, run().outcome("claims").status());
         assertEquals(Migrations.Status.UNDONE, Migrations.undo("claims", game, world, null).status());
-        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("claims") && l.contains("не запускался")));
+        assertTrue(Migrations.describe(game, world).stream().anyMatch(l -> l.startsWith("claims") && l.contains("not run")));
     }
 
     @Test

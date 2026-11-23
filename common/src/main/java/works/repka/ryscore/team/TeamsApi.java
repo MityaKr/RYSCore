@@ -232,7 +232,7 @@ public interface TeamsApi {
 
         private static void register(String id, Component label, Set<String> defaultRoles) {
             Objects.requireNonNull(id, "id");
-            if (id.indexOf(':') <= 0) throw new IllegalArgumentException("Право мода пишется с пространством: " + id);
+            if (id.indexOf(':') <= 0) throw new IllegalArgumentException("A mod permission needs a namespace: " + id);
             synchronized (PERMISSIONS) {
                 PERMISSIONS.put(id, new ModPermission(id, Objects.requireNonNull(label, "label"), defaultRoles));
             }

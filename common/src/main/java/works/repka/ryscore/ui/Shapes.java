@@ -46,7 +46,7 @@ final class Shapes {
         if (!Atlas.fits(plan.width, plan.height)) {
             if (!warnedTooBig) {
                 warnedTooBig = true;
-                org.slf4j.LoggerFactory.getLogger(Shapes.class).warn("Заготовка {}×{} больше страницы атласа, фигура не нарисована", plan.width, plan.height);
+                org.slf4j.LoggerFactory.getLogger(Shapes.class).warn("Shape {}x{} is larger than an atlas page, not drawn", plan.width, plan.height);
             }
             return null;
         }

@@ -50,7 +50,7 @@ public final class KeyDefaults {
         try {
             if (Files.exists(file)) for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) if (!line.isBlank()) done.add(line.trim());
         } catch (IOException e) {
-            RYSCore.LOG.warn("Снятые клавиши не прочитаны: {}", e.toString());
+            RYSCore.LOG.warn("Retired keys not read: {}", e.toString());
         }
         boolean keys = false, marks = false;
         for (Entry e : PENDING) {
@@ -59,7 +59,7 @@ public final class KeyDefaults {
             if (stale(e.key.saveString(), Actions.modsOf(e.key), e.oldKey)) {
                 e.key.setKey(InputConstants.UNKNOWN);
                 keys = true;
-                RYSCore.LOG.info("Клавиша {} снята: прежнее умолчание {} (назначить можно в управлении)", e.key.getName(), e.oldKey);
+                RYSCore.LOG.info("Key {} unbound: old default {} (can be bound in Controls)", e.key.getName(), e.oldKey);
             }
         }
         PENDING.clear();
@@ -72,7 +72,7 @@ public final class KeyDefaults {
                 Files.createDirectories(file.getParent());
                 Files.write(file, done, StandardCharsets.UTF_8);
             } catch (IOException e) {
-                RYSCore.LOG.warn("Снятые клавиши не сохранены: {}", e.toString());
+                RYSCore.LOG.warn("Retired keys not saved: {}", e.toString());
             }
         }
     }

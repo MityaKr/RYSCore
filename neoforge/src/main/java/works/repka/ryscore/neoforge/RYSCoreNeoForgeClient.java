@@ -174,7 +174,7 @@ public final class RYSCoreNeoForgeClient {
         } catch (IOException e) {
             // без шейдера кор рисует каждую фигуру сразу, как раньше
             Batch.setShader(null);
-            RYSCore.LOG.error("Шейдер пачки кора не загружен", e);
+            RYSCore.LOG.error("Core batch shader not loaded", e);
         }
     }
 

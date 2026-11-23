@@ -39,7 +39,7 @@ public final class Snbt {
         Snbt parser = new Snbt(text);
         JsonElement value = parser.value();
         parser.skipSeparators();
-        if (parser.pos < text.length()) throw parser.error("лишнее после значения");
+        if (parser.pos < text.length()) throw parser.error("extra text after the value");
         return value;
     }
 
@@ -56,7 +56,7 @@ public final class Snbt {
     /** Читает файл, в котором ожидается объект. */
     public static JsonObject readObject(Path file) throws IOException {
         JsonElement e = read(file);
-        if (!e.isJsonObject()) throw new SyntaxError("в файле не объект", 1, 1).in(file);
+        if (!e.isJsonObject()) throw new SyntaxError("the file is not an object", 1, 1).in(file);
         return e.getAsJsonObject();
     }
 
@@ -123,7 +123,7 @@ public final class Snbt {
 
     private JsonElement value() {
         skipSeparators();
-        if (pos >= text.length()) throw error("неожиданный конец");
+        if (pos >= text.length()) throw error("unexpected end");
         char c = text.charAt(pos);
         return switch (c) {
             case '{' -> object();
@@ -138,7 +138,7 @@ public final class Snbt {
         JsonObject object = new JsonObject();
         while (true) {
             skipSeparators();
-            if (pos >= text.length()) throw error("объект не закрыт");
+            if (pos >= text.length()) throw error("object not closed");
             char c = text.charAt(pos);
             if (c == '}') {
                 pos++;
@@ -146,7 +146,7 @@ public final class Snbt {
             }
             String key = c == '"' || c == '\'' ? quoted() : bare();
             skipSeparators();
-            if (pos >= text.length() || text.charAt(pos) != ':') throw error("нет «:» после ключа " + key);
+            if (pos >= text.length() || text.charAt(pos) != ':') throw error("no \":\" after key " + key);
             pos++;
             object.add(key, value());
         }
@@ -165,7 +165,7 @@ public final class Snbt {
         JsonArray array = new JsonArray();
         while (true) {
             skipSeparators();
-            if (pos >= text.length()) throw error("массив не закрыт");
+            if (pos >= text.length()) throw error("array not closed");
             if (text.charAt(pos) == ']') {
                 pos++;
                 return array;
@@ -186,7 +186,7 @@ public final class Snbt {
                 out.append(c);
             }
         }
-        throw error("строка не закрыта");
+        throw error("string not closed");
     }
 
     private static char unescape(char c) {
@@ -201,7 +201,7 @@ public final class Snbt {
     private String bare() {
         int start = pos;
         while (pos < text.length() && ":,{}[]".indexOf(text.charAt(pos)) < 0 && !Character.isWhitespace(text.charAt(pos))) pos++;
-        if (pos == start) throw error("ожидалось значение");
+        if (pos == start) throw error("value expected");
         return text.substring(start, pos);
     }
 
@@ -266,7 +266,7 @@ public final class Snbt {
         }
 
         private SyntaxError(String reason, int line, int column, @Nullable Path file) {
-            super("SNBT: " + reason + ", строка " + line + ", столбец " + column + (file == null ? "" : ", файл " + file));
+            super("SNBT: " + reason + ", line " + line + ", column " + column + (file == null ? "" : ", file " + file));
             this.reason = reason;
             this.line = line;
             this.column = column;

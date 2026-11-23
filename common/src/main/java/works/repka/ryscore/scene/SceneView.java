@@ -148,7 +148,7 @@ public final class SceneView implements AutoCloseable {
             slot.mesh = new SceneMesh(compiled);
         } catch (RuntimeException e) {
             slot.failed = true;
-            RYSCore.LOG.warn("Сцена не построена: {}", e.toString());
+            RYSCore.LOG.warn("Scene not built: {}", e.toString());
         }
     }
 

@@ -154,7 +154,7 @@ final class IconPaths {
                     x = sx;
                     y = sy;
                 }
-                default -> throw new IllegalArgumentException("Команда пути не поддерживается: " + cmd);
+                default -> throw new IllegalArgumentException("Path command not supported: " + cmd);
             }
             last = c;
         }

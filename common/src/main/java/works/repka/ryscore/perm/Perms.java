@@ -60,7 +60,7 @@ public final class Perms {
      */
     public static Node node(String modid, String name, String defaultRole, @Nullable Component label) {
         String id = modid + "." + name;
-        if (!NAME.matcher(id).matches()) throw new IllegalArgumentException("Имя права: строчные латинские, цифры, _ и точки: " + id);
+        if (!NAME.matcher(id).matches()) throw new IllegalArgumentException("Permission name: lowercase latin letters, digits, _ and dots: " + id);
         return NODES.computeIfAbsent(id, k -> new Node(modid, name, defaultRole, label));
     }
 

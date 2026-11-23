@@ -45,7 +45,7 @@ final class UiConfig {
                 try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
                     instance = GSON.fromJson(reader, UiConfig.class);
                 } catch (IOException | RuntimeException e) {
-                    LoggerFactory.getLogger(UiConfig.class).warn("Настройки вида не прочитаны: {}", e.toString());
+                    LoggerFactory.getLogger(UiConfig.class).warn("View settings not read: {}", e.toString());
                 }
             }
             if (instance == null) instance = new UiConfig();
@@ -62,7 +62,7 @@ final class UiConfig {
                 GSON.toJson(get(), writer);
             }
         } catch (IOException e) {
-            LoggerFactory.getLogger(UiConfig.class).warn("Настройки вида не сохранены: {}", e.toString());
+            LoggerFactory.getLogger(UiConfig.class).warn("View settings not saved: {}", e.toString());
         }
     }
 }

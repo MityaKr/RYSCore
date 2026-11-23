@@ -126,17 +126,17 @@ public final class Type {
 
     private static Face load(String path) {
         try (InputStream in = Type.class.getResourceAsStream(path)) {
-            if (in == null) throw new IOException("нет файла " + path);
+            if (in == null) throw new IOException("no file " + path);
             byte[] bytes = in.readAllBytes();
             // данные шрифта должны жить, пока жив STBTTFontinfo: память не освобождается намеренно
             ByteBuffer buffer = MemoryUtil.memAlloc(bytes.length);
             buffer.put(bytes).flip();
             STBTTFontinfo info = STBTTFontinfo.malloc();
-            if (!STBTruetype.stbtt_InitFont(info, buffer)) throw new IOException("не разобран " + path);
+            if (!STBTruetype.stbtt_InitFont(info, buffer)) throw new IOException("not parsed: " + path);
             return new Face(info);
         } catch (IOException e) {
             failed = true;
-            org.slf4j.LoggerFactory.getLogger(Type.class).error("Шрифт не загружен", e);
+            org.slf4j.LoggerFactory.getLogger(Type.class).error("Font not loaded", e);
             return null;
         }
     }

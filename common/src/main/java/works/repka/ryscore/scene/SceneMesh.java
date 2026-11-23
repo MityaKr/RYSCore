@@ -132,7 +132,7 @@ final class SceneMesh implements AutoCloseable {
                         }
                     }
                 } catch (Throwable t) {
-                    if (skipped++ == 0) RYSCore.LOG.warn("Блок {} не попал в сцену: {}", state, t.toString());
+                    if (skipped++ == 0) RYSCore.LOG.warn("Block {} left out of the scene: {}", state, t.toString());
                 }
             }
             for (Map.Entry<RenderType, BufferBuilder> e : builders.entrySet()) {

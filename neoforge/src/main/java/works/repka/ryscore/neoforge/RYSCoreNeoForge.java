@@ -47,7 +47,7 @@ public final class RYSCoreNeoForge {
             try {
                 Migrations.runServer(e.getServer());
             } catch (Throwable t) {
-                RYSCore.LOG.error("{} переезд не запустился", Migrations.TAG, t);
+                RYSCore.LOG.error("{} migration did not start", Migrations.TAG, t);
             }
         });
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent e) -> {
@@ -97,8 +97,8 @@ public final class RYSCoreNeoForge {
             .then(Commands.literal("migrate").requires(s -> s.hasPermission(4))
                 .then(Commands.literal("status").executes(c -> {
                     MinecraftServer server = c.getSource().getServer();
-                    for (String line : Migrations.describe(server.getServerDirectory(), server.getWorldPath(LevelResource.ROOT).normalize())) {
-                        c.getSource().sendSuccess(() -> Component.literal(line), false);
+                    for (Component line : Migrations.describeText(server.getServerDirectory(), server.getWorldPath(LevelResource.ROOT).normalize())) {
+                        c.getSource().sendSuccess(() -> line, false);
                     }
                     return Command.SINGLE_SUCCESS;
                 }))
@@ -109,7 +109,7 @@ public final class RYSCoreNeoForge {
     }
 
     private static int reply(CommandContext<CommandSourceStack> c, Migrations.Outcome o) {
-        Component text = Component.literal(o.toString());
+        Component text = o.text();
         if (o.status() == Migrations.Status.FAILED || o.status() == Migrations.Status.NOT_NEEDED || o.status() == Migrations.Status.ALREADY_DONE) {
             c.getSource().sendFailure(text);
             return 0;

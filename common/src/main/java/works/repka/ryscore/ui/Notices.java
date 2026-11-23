@@ -317,7 +317,7 @@ public final class Notices {
         String line = event.getLocation() + " volume " + volume + " pitch " + pitch + " delay " + ticks * 50 + "ms";
         PLAYED.add(line);
         if (PLAYED.size() > 64) PLAYED.removeFirst();
-        RYSCore.LOG.debug("Звук уведомления: {}", line);
+        RYSCore.LOG.debug("Notice sound: {}", line);
     }
 
     // --- для автотестов ---

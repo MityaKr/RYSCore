@@ -211,7 +211,7 @@ public final class Labels {
 
         private Label(Builder b) {
             this.id = b.id;
-            this.dimension = Objects.requireNonNull(b.dimension, "Метке нужно место: pos(dimension, x, y, z)");
+            this.dimension = Objects.requireNonNull(b.dimension, "A label needs a place: pos(dimension, x, y, z)");
             this.x = b.x;
             this.y = b.y;
             this.z = b.z;

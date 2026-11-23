@@ -85,14 +85,14 @@ public final class ThemeManager {
             try (Reader reader = found.get(file).openAsReader()) {
                 loaded.put(id, new Theme(id, JsonParser.parseReader(reader).getAsJsonObject()));
             } catch (Exception e) {
-                RYSCore.LOG.warn("Не удалось прочитать тему {}: {}", file, e.toString());
+                RYSCore.LOG.warn("Could not read theme {}: {}", file, e.toString());
             }
         }
         if (loaded.isEmpty()) return;
         THEMES.clear();
         THEMES.putAll(loaded);
         current = null;
-        RYSCore.LOG.info("Загружено тем: {}", THEMES.size());
+        RYSCore.LOG.info("Themes loaded: {}", THEMES.size());
     }
 
     private static Path file() {
@@ -108,7 +108,7 @@ public final class ThemeManager {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 if (json.has("theme")) selected = json.get("theme").getAsString();
             } catch (Exception e) {
-                RYSCore.LOG.warn("Не удалось прочитать выбор темы: {}", e.toString());
+                RYSCore.LOG.warn("Could not read the theme choice: {}", e.toString());
             }
         }
         return selected;
@@ -122,7 +122,7 @@ public final class ThemeManager {
             json.addProperty("theme", id);
             Files.writeString(file, json.toString(), StandardCharsets.UTF_8);
         } catch (Exception e) {
-            RYSCore.LOG.warn("Не удалось сохранить выбор темы: {}", e.toString());
+            RYSCore.LOG.warn("Could not save the theme choice: {}", e.toString());
         }
     }
 
@@ -141,7 +141,7 @@ public final class ThemeManager {
                 String id = RYSCore.MOD_ID + ":" + name;
                 THEMES.put(id, new Theme(id, json));
             } catch (Exception e) {
-                RYSCore.LOG.warn("Не удалось прочитать встроенную тему {}: {}", name, e.toString());
+                RYSCore.LOG.warn("Could not read built-in theme {}: {}", name, e.toString());
             }
         }
         if (THEMES.isEmpty()) {

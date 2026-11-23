@@ -40,7 +40,7 @@ public final class TeamCards {
                 Detailed card = provider.get();
                 if (card != null) out.add(card);
             } catch (Throwable t) {
-                LoggerFactory.getLogger(TeamCards.class).warn("Карточка сводки не построена", t);
+                LoggerFactory.getLogger(TeamCards.class).warn("Summary card not built", t);
             }
         }
         for (Card card : current()) out.add(new Detailed(card, null, -1f));
@@ -55,7 +55,7 @@ public final class TeamCards {
                 if (card != null) out.add(card);
             } catch (Throwable t) {
                 // чужая карточка не должна ломать экран команды
-                LoggerFactory.getLogger(TeamCards.class).warn("Карточка сводки не построена", t);
+                LoggerFactory.getLogger(TeamCards.class).warn("Summary card not built", t);
             }
         }
         return out;

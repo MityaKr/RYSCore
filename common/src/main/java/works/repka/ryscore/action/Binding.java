@@ -3,6 +3,7 @@ package works.repka.ryscore.action;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Locale;
 import java.util.Objects;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -92,12 +93,12 @@ public final class Binding {
         return key.getName() + (ctrl ? "+ctrl" : "") + (shift ? "+shift" : "") + (alt ? "+alt" : "");
     }
 
-    /** Подпись для игрока: «Alt+1», «Ctrl+H», «Мышь 4». Буквы латиницей при любой раскладке. */
+    /** Подпись для игрока: «Alt+1», «Ctrl+H», «Mouse 4» (мышь и «`» по языку игры, 1.17.1). Буквы латиницей при любой раскладке. */
     public String label() {
         return (ctrl ? "Ctrl+" : "") + (shift ? "Shift+" : "") + (alt ? "Alt+" : "") + keyLabel(key);
     }
 
-    /** Подпись клавиши как на клавиатуре: «Y», а не «Н»; мышь «Мышь 4». */
+    /** Подпись клавиши как на клавиатуре: «Y», а не «Н»; мышь «Mouse 4» или «Мышь 4» по языку. */
     public static String keyLabel(InputConstants.Key key) {
         String name = key.getName();
         String keyboard = "key.keyboard.", mouse = "key.mouse.";
@@ -105,7 +106,7 @@ public final class Binding {
             String rest = name.substring(keyboard.length());
             if (rest.length() == 1) return rest.toUpperCase(Locale.ROOT);
             return switch (rest) {
-                case "grave.accent" -> "Ё";
+                case "grave.accent" -> tr("ryscore.key.grave", "`");
                 case "semicolon" -> ";";
                 case "apostrophe" -> "'";
                 case "comma" -> ",";
@@ -132,13 +133,17 @@ public final class Binding {
         if (name.startsWith(mouse)) {
             String rest = name.substring(mouse.length());
             return switch (rest) {
-                case "left" -> "ЛКМ";
-                case "right" -> "ПКМ";
-                case "middle" -> "СКМ";
-                default -> "Мышь " + rest;
+                case "left" -> tr("ryscore.key.mouse.left", "LMB");
+                case "right" -> tr("ryscore.key.mouse.right", "RMB");
+                case "middle" -> tr("ryscore.key.mouse.middle", "MMB");
+                default -> Component.translatableWithFallback("ryscore.key.mouse.other", "Mouse %s", rest).getString();
             };
         }
         return key.getDisplayName().getString();
+    }
+
+    private static String tr(String key, String english) {
+        return Component.translatableWithFallback(key, english).getString();
     }
 
     @Override

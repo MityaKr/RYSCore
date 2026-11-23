@@ -151,7 +151,7 @@ public final class Dock {
                         .getMethod("render", GuiGraphics.class, net.minecraft.client.gui.Font.class, int.class);
                     ok = true;
                 } catch (Throwable t) {
-                    RYSCore.LOG.warn("Кнопки FTB Library недоступны, остаётся её собственная панель: {}", t.toString());
+                    RYSCore.LOG.warn("FTB Library buttons unavailable, its own panel stays: {}", t.toString());
                 }
             }
             OK = ok;
@@ -234,7 +234,7 @@ public final class Dock {
     private static void fail(Throwable t) {
         broken = true;
         visible = false;
-        RYSCore.LOG.warn("Кнопки FTB на панели семьи отключены: {}", t.toString());
+        RYSCore.LOG.warn("FTB buttons on the family panel disabled: {}", t.toString());
     }
 
     private static void refresh(boolean withFtb) {
@@ -511,7 +511,7 @@ public final class Dock {
             if (entry.own() != null) entry.own().action().run();
             else Ftb.click.invoke(entry.ftb(), Screen.hasShiftDown());
         } catch (Throwable t) {
-            RYSCore.LOG.warn("Кнопка панели {} не сработала: {}", entry.key(), t.toString());
+            RYSCore.LOG.warn("Panel button {} failed: {}", entry.key(), t.toString());
         }
         return true;
     }

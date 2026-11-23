@@ -20,6 +20,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.Locale;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
@@ -109,7 +111,7 @@ public final class Migrations {
          * исключением с причиной. После успеха ядро снимает отметку. Без переопределения откат не поддерживается.
          */
         default Report undo(Context c) throws Exception {
-            throw new UnsupportedOperationException("шаг не умеет откат");
+            throw new UnsupportedOperationException(NO_UNDO);
         }
     }
 
@@ -222,7 +224,7 @@ public final class Migrations {
             StringBuilder out = new StringBuilder();
             counts.forEach((k, v) -> out.append(out.isEmpty() ? "" : ", ").append(k).append(' ').append(v));
             for (String l : lines) out.append(out.isEmpty() ? "" : "; ").append(l);
-            if (!skipped.isEmpty()) out.append(out.isEmpty() ? "" : "; ").append("пропущено: ").append(String.join(", ", skipped));
+            if (!skipped.isEmpty()) out.append(out.isEmpty() ? "" : "; ").append("skipped: ").append(String.join(", ", skipped));
             return out.toString();
         }
     }
@@ -292,12 +294,23 @@ public final class Migrations {
         private final String id;
         private final Status status;
         private final String message;
+        private final @Nullable Line note;
         private final @Nullable Report report;
 
         Outcome(String id, Status status, String message, @Nullable Report report) {
+            this(id, status, message, null, report);
+        }
+
+        /** Пояснение ядра: в чат уходит ключом перевода, в лог и {@link #message()} английским. */
+        Outcome(String id, Status status, Line note, @Nullable Report report) {
+            this(id, status, note.text(), note, report);
+        }
+
+        private Outcome(String id, Status status, String message, @Nullable Line note, @Nullable Report report) {
             this.id = id;
             this.status = status;
             this.message = message;
+            this.note = note;
             this.report = report;
         }
 
@@ -321,9 +334,14 @@ public final class Migrations {
             return status == Status.DONE || status == Status.PARTIAL;
         }
 
+        /** Строка для чата (1.17.1): ключ перевода с английским запасом, клиент покажет на своём языке. */
+        public Component text() {
+            return Component.literal(id + ": ").append(line(this).component());
+        }
+
         @Override
         public String toString() {
-            return id + ": " + text(this);
+            return id + ": " + Migrations.text(this);
         }
     }
 
@@ -419,9 +437,9 @@ public final class Migrations {
         try {
             JsonElement e = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
             if (e.isJsonObject()) return new Flag(e.getAsJsonObject());
-            RYSCore.LOG.warn("{} флаг сборки {} не объект, переезд только командой", TAG, file);
+            RYSCore.LOG.warn("{} pack flag {} is not an object, migration only by command", TAG, file);
         } catch (Exception e) {
-            RYSCore.LOG.warn("{} флаг сборки {} не прочитан ({}), переезд только командой", TAG, file, e.toString());
+            RYSCore.LOG.warn("{} pack flag {} not read ({}), migration only by command", TAG, file, e.toString());
         }
         return Flag.NONE;
     }
@@ -481,27 +499,39 @@ public final class Migrations {
         return new Engine(Side.SERVER, gameDir, worldDir, worldDir.resolve(STATE_DIR), server, Map.of(), true).undo(id);
     }
 
-    /** Команда {@code /rys migrate status}: флаг, копия и отметки шагов строками для чата. */
+    /** Команда {@code /rys migrate status}: флаг, копия и отметки шагов строками по-английски (для лога). */
     public static List<String> describe(Path gameDir, Path worldDir) {
-        List<String> out = new ArrayList<>();
+        return status(gameDir, worldDir).stream().map(Line::text).toList();
+    }
+
+    /** То же для чата (1.17.1): ключи перевода с английским запасом. */
+    public static List<Component> describeText(Path gameDir, Path worldDir) {
+        return status(gameDir, worldDir).stream().map(Line::component).toList();
+    }
+
+    private static List<Line> status(Path gameDir, Path worldDir) {
+        List<Line> out = new ArrayList<>();
         Flag flag = flag(gameDir);
-        out.add(flag.present() ? "флаг сборки: " + flag.from() + " " + flag.steps() : "флага сборки нет: переезд только командой");
+        out.add(flag.present() ? new Line("status.flag", "pack flag: %s %s", flag.from(), String.valueOf(flag.steps()))
+            : new Line("status.no_flag", "no pack flag: migration only by command"));
         State state = State.load(worldDir.resolve(STATE_DIR));
-        if (state.backup() != null) out.add("копия: " + state.backup());
+        if (state.backup() != null) out.add(new Line("status.backup", "backup: %s", state.backup()));
         for (Step s : steps()) {
             if (s.side() != Side.SERVER) continue;
             JsonObject entry = state.entry(s.id());
-            String line;
+            String time = entry == null ? "" : Snbt.string(entry, "time", "");
+            Line line;
             if (entry == null) {
-                line = "не запускался";
+                line = new Line("status.never", "not run");
             } else if (Snbt.bool(entry, "done", false)) {
-                line = (Snbt.bool(entry, "partial", false) ? "сделан частично " : "сделан ") + Snbt.string(entry, "time", "");
+                line = Snbt.bool(entry, "partial", false) ? new Line("status.done_partial", "done partially %s", time)
+                    : new Line("status.done", "done %s", time);
             } else if (Snbt.bool(entry, "partial", false)) {
-                line = "частично " + Snbt.string(entry, "time", "") + ", повторится при запуске: " + String.join("; ", lines(entry));
+                line = new Line("status.partial", "partial %s, will repeat on start: %s", time, String.join("; ", lines(entry)));
             } else {
-                line = "сбой " + Snbt.string(entry, "time", "") + ": " + Snbt.string(entry, "error", "");
+                line = new Line("status.failed", "failed %s: %s", time, Snbt.string(entry, "error", ""));
             }
-            out.add(s.id() + " (" + s.order() + "): " + line);
+            out.add(new Line("status.step", "%s (%s): %s", s.id(), String.valueOf(s.order()), line));
         }
         return out;
     }
@@ -513,15 +543,41 @@ public final class Migrations {
     }
 
     static String text(Outcome o) {
+        return line(o).text();
+    }
+
+    private static Line line(Outcome o) {
+        Object m = o.note != null ? o.note : o.message;
+        boolean empty = o.message.isEmpty();
         return switch (o.status) {
-            case DONE -> "готово" + (o.message.isEmpty() ? "" : ", " + o.message);
-            case PARTIAL -> "частично, " + o.message + "; отметки нет, повторится при следующем запуске";
-            case ALREADY_DONE -> "пропущен, уже сделан " + o.message;
-            case NOT_IN_FLAG -> "пропущен, " + o.message;
-            case NOT_NEEDED -> "не нужен" + (o.message.isEmpty() ? "" : ", " + o.message);
-            case FAILED -> "сбой: " + o.message;
-            case UNDONE -> "откат" + (o.message.isEmpty() ? "" : ", " + o.message);
+            case DONE -> empty ? new Line("done", "done") : new Line("done.with", "done, %s", m);
+            case PARTIAL -> new Line("partial", "partial, %s; not marked done, will repeat on the next start", m);
+            case ALREADY_DONE -> new Line("already_done", "skipped, already done %s", m);
+            case NOT_IN_FLAG -> new Line("not_in_flag", "skipped, %s", m);
+            case NOT_NEEDED -> empty ? new Line("not_needed", "not needed") : new Line("not_needed.with", "not needed, %s", m);
+            case FAILED -> new Line("failed", "failed: %s", m);
+            case UNDONE -> empty ? new Line("undone", "undone") : new Line("undone.with", "undone, %s", m);
         };
+    }
+
+    static final String NO_UNDO = "the step cannot undo";
+
+    /**
+     * Строка ядра для чата оператора: ключ {@code ryscore.migrate.<key>} и английский запас. Аргументы строки или
+     * вложенные {@code Line}. Клиент с ядром покажет перевод, без него английский; лог и файл отчёта берут английский.
+     */
+    record Line(String key, String english, Object... args) {
+        String text() {
+            Object[] a = args.clone();
+            for (int i = 0; i < a.length; i++) if (a[i] instanceof Line l) a[i] = l.text();
+            return String.format(Locale.ROOT, english, a);
+        }
+
+        Component component() {
+            Object[] a = args.clone();
+            for (int i = 0; i < a.length; i++) a[i] = a[i] instanceof Line l ? l.component() : String.valueOf(a[i]);
+            return Component.translatableWithFallback("ryscore.migrate." + key, english, a);
+        }
     }
 
     // ---- исполнение ----
@@ -556,8 +612,8 @@ public final class Migrations {
                 List<Outcome> out = new ArrayList<>();
                 if (steps.isEmpty()) return new Result(side, out, null);
                 if (!flag.present()) {
-                    for (Step s : steps) out.add(new Outcome(s.id(), Status.NOT_IN_FLAG, "флага сборки нет", null));
-                    RYSCore.LOG.info("{} флага сборки {} нет: переезд с FTB только командой /rys migrate run", TAG, FLAG_FILE);
+                    for (Step s : steps) out.add(new Outcome(s.id(), Status.NOT_IN_FLAG, new Line("note.no_flag", "no pack flag"), null));
+                    RYSCore.LOG.info("{} no pack flag {}: migration from FTB only by command /rys migrate run", TAG, FLAG_FILE);
                     return new Result(side, out, null);
                 }
                 state = State.load(stateDir);
@@ -570,8 +626,8 @@ public final class Migrations {
         Outcome manual(String id) {
             synchronized (LOCK) {
                 Step s = step(id);
-                if (s == null) return new Outcome(id, Status.FAILED, "такого шага нет", null);
-                if (s.side() != side) return new Outcome(id, Status.FAILED, "шаг идёт на клиенте", null);
+                if (s == null) return new Outcome(id, Status.FAILED, new Line("note.no_step", "no such step"), null);
+                if (s.side() != side) return new Outcome(id, Status.FAILED, new Line("note.client_step", "the step runs on the client"), null);
                 state = State.load(stateDir);
                 Outcome o = attempt(s, false);
                 finish(List.of(o));
@@ -582,9 +638,9 @@ public final class Migrations {
         Outcome undo(String id) {
             synchronized (LOCK) {
                 Step s = step(id);
-                if (s == null) return new Outcome(id, Status.FAILED, "такого шага нет", null);
+                if (s == null) return new Outcome(id, Status.FAILED, new Line("note.no_step", "no such step"), null);
                 state = State.load(stateDir);
-                if (!state.done(id) && !state.partial(id)) return new Outcome(id, Status.FAILED, "отметки нет, откатывать нечего", null);
+                if (!state.done(id) && !state.partial(id)) return new Outcome(id, Status.FAILED, new Line("note.nothing_to_undo", "not marked done, nothing to undo"), null);
                 Outcome o;
                 try {
                     Report r = s.undo(context(s));
@@ -592,8 +648,10 @@ public final class Migrations {
                     state.save();
                     o = new Outcome(id, Status.UNDONE, r == null ? "" : r.summary(), r);
                 } catch (Throwable t) {
-                    o = new Outcome(id, Status.FAILED, reason(t), null);
-                    if (!(t instanceof UnsupportedOperationException)) RYSCore.LOG.warn("{} {}: откат не прошёл", TAG, id, t);
+                    o = t instanceof UnsupportedOperationException && NO_UNDO.equals(t.getMessage())
+                        ? new Outcome(id, Status.FAILED, new Line("note.no_undo", NO_UNDO), null)
+                        : new Outcome(id, Status.FAILED, reason(t), null);
+                    if (!(t instanceof UnsupportedOperationException)) RYSCore.LOG.warn("{} {}: undo failed", TAG, id, t);
                 }
                 finish(List.of(o));
                 return o;
@@ -602,7 +660,7 @@ public final class Migrations {
 
         private Outcome attempt(Step s, boolean byFlag) {
             String id = s.id();
-            if (byFlag && !flag.has(id)) return new Outcome(id, Status.NOT_IN_FLAG, "нет во флаге сборки", null);
+            if (byFlag && !flag.has(id)) return new Outcome(id, Status.NOT_IN_FLAG, new Line("note.not_in_flag", "not in the pack flag"), null);
             if (state.done(id)) return new Outcome(id, Status.ALREADY_DONE, Snbt.string(state.entry(id), "time", ""), null);
             Context c = context(s);
             try {
@@ -611,7 +669,7 @@ public final class Migrations {
                 return fail(s, t);
             }
             if (side == Side.SERVER && !backup()) {
-                return new Outcome(id, Status.FAILED, "копия FTB не сделана, шаг не запускался", null);
+                return new Outcome(id, Status.FAILED, new Line("note.no_backup", "FTB backup failed, the step did not run"), null);
             }
             long start = System.nanoTime();
             try {
@@ -622,11 +680,11 @@ public final class Migrations {
                 state.save();
                 if (r.isPartial()) {
                     // прочитанное уже в базе; повтор безопасен: шаг пропускает перенесённое и доберёт остальное
-                    RYSCore.LOG.warn("{} {}: перенесено не всё ({}). Отметки «сделано» нет: шаг повторится при следующем запуске "
-                        + "или командой /rys migrate run {}, перенесённое не задвоится. Почините файлы FTB, копия в {}",
-                        TAG, id, String.join("; ", r.lines()), id, state.backup() == null ? "нет" : resolveBackup());
+                    RYSCore.LOG.warn("{} {}: not everything was moved ({}). Not marked done: the step repeats on the next start "
+                        + "or by command /rys migrate run {}, moved data will not be duplicated. Fix the FTB files, backup in {}",
+                        TAG, id, String.join("; ", r.lines()), id, state.backup() == null ? "none" : resolveBackup());
                 }
-                return new Outcome(id, r.isPartial() ? Status.PARTIAL : Status.DONE, (r.summary() + (r.summary().isEmpty() ? "" : ", ") + ms + " мс"), r);
+                return new Outcome(id, r.isPartial() ? Status.PARTIAL : Status.DONE, (r.summary() + (r.summary().isEmpty() ? "" : ", ") + ms + " ms"), r);
             } catch (Throwable t) {
                 return fail(s, t);
             }
@@ -634,12 +692,12 @@ public final class Migrations {
 
         private Outcome fail(Step s, Throwable t) {
             String why = reason(t);
-            RYSCore.LOG.warn("{} {}: сбой, шаг повторится при следующем запуске", TAG, s.id(), t);
+            RYSCore.LOG.warn("{} {}: failed, the step repeats on the next start", TAG, s.id(), t);
             try {
                 state.markFailed(s.id(), why);
                 state.save();
             } catch (IOException e) {
-                RYSCore.LOG.warn("{} файл отметок не записан", TAG, e);
+                RYSCore.LOG.warn("{} state file not written", TAG, e);
             }
             return new Outcome(s.id(), Status.FAILED, why, null);
         }
@@ -673,11 +731,11 @@ public final class Migrations {
                 }
                 state.backup(name);
                 state.save();
-                RYSCore.LOG.info("{} копия FTB и своих данных: {} ({} файлов)", TAG, target, files);
+                RYSCore.LOG.info("{} backup of FTB and own data: {} ({} files)", TAG, target, files);
                 return true;
             } catch (IOException e) {
                 backupFailed = true;
-                RYSCore.LOG.error("{} копия FTB не сделана, серверные шаги не идут", TAG, e);
+                RYSCore.LOG.error("{} FTB backup failed, server steps do not run", TAG, e);
                 return false;
             }
         }
@@ -709,8 +767,8 @@ public final class Migrations {
         /** Лог блоком и отчёт в файл, если что-то шло. */
         private void finish(List<Outcome> out) {
             boolean anything = out.stream().anyMatch(o -> o.ran() || o.status == Status.FAILED || o.status == Status.UNDONE);
-            String head = (side == Side.SERVER ? "сервер" : "клиент") + (manual ? ", командой" : "")
-                + (flag.present() ? ", флаг " + flag.from() + " " + flag.steps() : ", без флага");
+            String head = (side == Side.SERVER ? "server" : "client") + (manual ? ", by command" : "")
+                + (flag.present() ? ", flag " + flag.from() + " " + flag.steps() : ", no flag");
             if (anything) {
                 RYSCore.LOG.info("{} {}", TAG, head);
                 for (Outcome o : out) RYSCore.LOG.info("{} {}", TAG, o);
@@ -727,7 +785,7 @@ public final class Migrations {
                 Files.writeString(stateDir.resolve(REPORT_FILE), text, StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
             } catch (IOException e) {
-                RYSCore.LOG.warn("{} отчёт не записан", TAG, e);
+                RYSCore.LOG.warn("{} report not written", TAG, e);
             }
         }
     }
@@ -751,7 +809,7 @@ public final class Migrations {
                     if (e.isJsonObject()) json = e.getAsJsonObject();
                 } catch (Exception e) {
                     // битый файл не повод переносить второй раз поверх: старый откладывается, шаги сами проверят «уже есть»
-                    RYSCore.LOG.warn("{} файл отметок {} не прочитан, отложен рядом", TAG, file, e);
+                    RYSCore.LOG.warn("{} state file {} not read, moved aside", TAG, file, e);
                     try {
                         Files.move(file, file.resolveSibling(STATE_FILE + ".broken-" + System.currentTimeMillis()));
                     } catch (IOException ignored) {

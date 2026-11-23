@@ -237,7 +237,7 @@ public interface MapApi {
 
         private Marker(Builder b) {
             this.id = b.id;
-            this.dimension = Objects.requireNonNull(b.dimension, "Метке нужно место: pos(dimension, x, y, z)");
+            this.dimension = Objects.requireNonNull(b.dimension, "A marker needs a place: pos(dimension, x, y, z)");
             this.x = b.x;
             this.y = b.y;
             this.z = b.z;
@@ -444,7 +444,7 @@ public interface MapApi {
             this.icon = b.icon;
             this.visible = b.visible;
             this.enabled = b.enabled;
-            this.run = Objects.requireNonNull(b.run, "Пункту меню нужно действие: run(...)");
+            this.run = Objects.requireNonNull(b.run, "A menu item needs an action: run(...)");
             this.group = b.group;
         }
 
