@@ -568,17 +568,17 @@ final class KeysScreen extends ScaledScreen {
         Kit.caps(g, t, Component.translatable("ryscore.keys.wheel").getString(), x, y + 7, 10.5f, 0.42f);
         List<Ring> rings = new ArrayList<>();
         for (Ring r : Actions.rings()) if (r.available()) rings.add(r);
-        float segW = 0;
-        for (Ring r : rings) segW += Draw.labelWidth(r.label().getString(), 12.5f, Weight.MEDIUM) + 12;
-        int sx = (int) (x + w - segW - 4);
-        Draw.roundBox(g, sx - 2, y - 1, segW + 4, 16, 4.5f, t.c("input.bg"), t.c("card.border"));
-        for (Ring r : rings) {
-            ResourceLocation id = r.id();
-            sx += Kit.pill(g, t, hits, sx, y, r.label().getString(), id.equals(ring), mx, my, () -> {
-                ring = id;
-                selectedSector = -1;
-            });
+        List<Kit.Segment> segs = new ArrayList<>(rings.size());
+        int sel = -1;
+        for (int i = 0; i < rings.size(); i++) {
+            segs.add(Kit.Segment.of(rings.get(i).label().getString()));
+            if (rings.get(i).id().equals(ring)) sel = i;
         }
+        float segW = Kit.segmentedWidth(t, segs);
+        Kit.segmented(g, t, hits, x + w - segW - 2, y - 1, 16, segs, sel, mx, my, i -> {
+            ring = rings.get(i).id();
+            selectedSector = -1;
+        });
         // колесо
         wheelCx = x + w / 2f;
         wheelCy = y + 26 + WR + 12;
