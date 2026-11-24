@@ -29,6 +29,8 @@ public final class Theme {
         fb("input.bg", "slot.bg");
         fb("input.fg", "text.body");
         fb("input.border", "panel.border");
+        // светлое поле поиска в шапке и подложка сегментного переключателя в теме с фаской (1.17.3, 1.18)
+        fb("search.bg", "input.bg");
         fb("button.bg", "panel.bg");
         fb("button.border", "panel.border");
         fb("button.hover", "slot.hover");

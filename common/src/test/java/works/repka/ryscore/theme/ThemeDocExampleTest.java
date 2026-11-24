@@ -28,7 +28,7 @@ class ThemeDocExampleTest {
         "button.hover", "callout.bg", "callout.border", "card.bg", "card.border", "cell.bg", "cell.border", "coin", "column.bg",
         "filter.active.bg", "hud.bg", "hud.border", "hud.fg", "hud.gold", "hud.muted", "hud.ok", "input.bg", "input.border",
         "input.fg", "link", "overlay", "panel.bevel.dark", "panel.bevel.light", "panel.bg", "panel.border", "plate.bg",
-        "plate.border", "row.selected.bg", "sidebar.bg", "slot.bevel.dark", "slot.bevel.light", "slot.bg", "slot.border",
+        "plate.border", "row.selected.bg", "search.bg", "sidebar.bg", "slot.bevel.dark", "slot.bevel.light", "slot.bg", "slot.border",
         "slot.hover", "state.bad", "state.ok", "state.warn", "tab.active.bg", "tab.active.fg", "tab.inactive.bg",
         "tab.inactive.fg", "text.body", "text.dim", "text.muted", "text.primary", "text.secondary", "tooltip.bg",
         "tooltip.border", "tooltip.fg", "wheel.center", "wheel.dim", "wheel.fg", "wheel.hover", "wheel.hover.line", "wheel.line",

@@ -159,7 +159,7 @@ public final class Kit {
             boolean hot = action != null && over(mx, my, left, y, w, h);
             t.tabLine(g, left, y, w, h, tab.active(), hot);
             float tx = left + pad;
-            Draw.label(g, tab.label(), tx, cy, TAB_PX, tab.active() ? Weight.SEMIBOLD : Weight.REGULAR, action == null ? t.c("text.dim") : t.tabLineFg(tab.active(), hot));
+            Draw.label(g, tab.label(), tx, cy, TAB_PX, tab.active() ? Weight.SEMIBOLD : Weight.REGULAR, action == null ? tabOffFg(t) : t.tabLineFg(tab.active(), hot));
             if (numbers && tab.count() >= 0) {
                 float nx = tx + Draw.labelWidth(tab.label(), TAB_PX, Weight.SEMIBOLD) + TAB_NUMBER_GAP;
                 Draw.label(g, Integer.toString(tab.count()), nx, cy, TAB_PX, Weight.REGULAR, t.c("text.dim"));
@@ -169,12 +169,17 @@ public final class Kit {
         }
     }
 
+    /** Подпись недоступной вкладки: в теме с фаской бледная светлая на серой закладке, иначе {@code text.dim}. */
+    private static int tabOffFg(Theme t) {
+        return t.beveled() ? Draw.alpha(t.c("tab.inactive.fg"), 0.55f) : t.c("text.dim");
+    }
+
     /** Одна вкладка раздела. Возвращает ширину. Без действия ({@code action == null}) вкладка неактивна: тусклая и не нажимается. */
     public static int sectionTab(GuiGraphics g, Theme t, Hits hits, int x, int y, int h, String label, boolean active, int mx, int my, @Nullable Runnable action) {
         int w = (int) Math.ceil(Draw.labelWidth(label, TAB_PX, Weight.SEMIBOLD)) + 12;
         boolean hot = action != null && over(mx, my, x, y, w, h);
         t.tabLine(g, x, y, w, h, active, hot);
-        int fg = action == null ? t.c("text.dim") : t.tabLineFg(active, hot);
+        int fg = action == null ? tabOffFg(t) : t.tabLineFg(active, hot);
         Draw.label(g, label, x + 6, y + (h - 1) / 2f, TAB_PX, active ? Weight.SEMIBOLD : Weight.REGULAR, fg);
         if (action != null) hits.add(x, y, w, h, b -> action.run());
         return w;
@@ -212,6 +217,128 @@ public final class Kit {
         Draw.label(g, label, x + 6, y + h / 2f, 12.5f, weight, active ? t.c("text.primary") : t.c("text.muted"));
         hits.add(x, y, w, h, b -> action.run());
         return w;
+    }
+
+    /** Высота сегментного переключателя по макету {@code .seg}: 34 px, 17 единиц. */
+    public static final float SEG_H = 17;
+    private static final float SEG_PX = 12.5f, SEG_PAD = 6, SEG_ICON = 7, SEG_ICON_GAP = 3, SEG_GAP = 1, SEG_RADIUS = 4.5f;
+
+    /** Пункт сегментного переключателя (1.18): подпись, значок перед ней, недоступный пункт. */
+    public static final class Segment {
+        private final String label;
+        private @Nullable Icons.Shape icon;
+        private boolean disabled;
+
+        private Segment(String label) {
+            this.label = label;
+        }
+
+        public static Segment of(String label) {
+            return new Segment(label);
+        }
+
+        /** Значок перед подписью, 7 единиц. */
+        public Segment icon(@Nullable Icons.Shape icon) {
+            this.icon = icon;
+            return this;
+        }
+
+        /** Недоступный пункт: бледный и не нажимается, причину экран показывает подсказкой по индексу из {@link #segmented}. */
+        public Segment disabled(boolean disabled) {
+            this.disabled = disabled;
+            return this;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public @Nullable Icons.Shape iconShape() {
+            return icon;
+        }
+
+        public boolean isDisabled() {
+            return disabled;
+        }
+
+        float width() {
+            float text = Math.max(Draw.labelWidth(label, SEG_PX, Weight.REGULAR), Draw.labelWidth(label, SEG_PX, Weight.MEDIUM));
+            return (float) Math.ceil(text + (icon != null ? SEG_ICON + SEG_ICON_GAP : 0)) + SEG_PAD * 2;
+        }
+    }
+
+    private static float segInset(Theme t) {
+        // в теме с фаской отступ считается от внешнего края, внутри него фаска в единицу
+        return t.beveled() ? 2f : 1.5f;
+    }
+
+    private static float[] segWidths(List<Segment> items) {
+        float[] w = new float[items.size()];
+        for (int i = 0; i < w.length; i++) w[i] = items.get(i).width();
+        return w;
+    }
+
+    /** Ширина сегментного переключателя в единицах. Не зависит от выбранного пункта: окно не дёргается при переключении. */
+    public static float segmentedWidth(Theme t, List<Segment> items) {
+        return SegmentLayout.width(segWidths(items), segInset(t), SEG_GAP);
+    }
+
+    /**
+     * Сегментный переключатель (1.18, замечание автора 24.11: «подложка выбранного стоит неровно»): «Карта | Список»,
+     * «Slate | Vanilla | Glass». Подложка и пункты считаются в пикселях экрана, отступ выбранного пункта от подложки равен со
+     * всех сторон при любом масштабе. В slate и glass подложка {@code input.bg} с рамкой {@code panel.border}, выбранный пункт
+     * на плашке {@code filter.active.bg}; в теме с фаской подложка вдавленное светлое поле {@code search.bg}, выбранный пункт
+     * нажатая кнопка {@link Theme#pressed}.
+     *
+     * @param h      высота подложки, обычно {@link #SEG_H}
+     * @param mx     мышь в единицах, дробная тоже годится
+     * @param pick   получает индекс нажатого пункта
+     * @return индекс пункта под мышью или -1, для подсказки
+     */
+    public static int segmented(GuiGraphics g, Theme t, Hits hits, float x, float y, float h, List<Segment> items, int selected,
+                                double mx, double my, IntConsumer pick) {
+        if (items.isEmpty()) return -1;
+        double s = Draw.scale(g);
+        boolean bevel = t.beveled();
+        float inset = segInset(t);
+        SegmentLayout l = SegmentLayout.of(s, x, y, h, segWidths(items), inset, SEG_GAP);
+        float px = (float) (l.x0 / s), py = (float) (l.y0 / s), pw = (float) ((l.x1 - l.x0) / s), ph = (float) ((l.y1 - l.y0) / s);
+        if (bevel) Draw.bevel(g, px, py, pw, ph, t.c("search.bg"), t.c("slot.bevel.dark"), t.c("slot.bevel.light"), 1, false);
+        else Draw.roundBox(g, px, py, pw, ph, Math.min(SEG_RADIUS, ph / 2f), t.c("input.bg"), t.c("panel.border"));
+        float radius = Math.max(0.5f, Math.min(SEG_RADIUS, ph / 2f) - inset);
+        float top = (float) (l.top / s), bottom = (float) (l.bottom / s), cy = (top + bottom) / 2f;
+        int hovered = -1;
+        for (int i = 0; i < items.size(); i++) {
+            Segment item = items.get(i);
+            float lx = (float) (l.left[i] / s), rx = (float) (l.right[i] / s);
+            // нажимается вся высота подложки, граница между пунктами посередине промежутка
+            double hx0 = i == 0 ? l.x0 : (l.right[i - 1] + l.left[i]) / 2.0, hx1 = i == items.size() - 1 ? l.x1 : (l.right[i] + l.left[i + 1]) / 2.0;
+            boolean over = mx >= hx0 / s && mx < hx1 / s && my >= py && my < py + ph;
+            if (over) hovered = i;
+            boolean active = i == selected, hot = over && !active && !item.disabled;
+            if (active) {
+                if (bevel) t.pressed(g, lx, top, rx - lx, bottom - top, 0);
+                else Draw.round(g, lx, top, rx - lx, bottom - top, radius, t.c("filter.active.bg"));
+            } else if (hot) {
+                if (bevel) Draw.bevel(g, lx, top, rx - lx, bottom - top, Draw.alpha(t.c("slot.bg"), 0.35f), 0, 0, 1, false);
+                else Draw.round(g, lx, top, rx - lx, bottom - top, radius, Draw.alpha(t.c("filter.active.bg"), 0.5f));
+            }
+            int color = active ? (bevel ? t.pressedFg() : t.c("text.primary")) : t.c("text.muted");
+            if (item.disabled) color = Draw.alpha(color, 0.4f);
+            Weight weight = active ? Weight.MEDIUM : Weight.REGULAR;
+            float iconW = item.icon != null ? SEG_ICON + SEG_ICON_GAP : 0;
+            float content = iconW + Draw.labelWidth(item.label, SEG_PX, weight);
+            float cx = (lx + rx) / 2f - content / 2f;
+            if (item.icon != null) Icons.draw(g, item.icon, cx, cy - SEG_ICON / 2f, SEG_ICON, color);
+            Draw.label(g, item.label, cx + iconW, cy, SEG_PX, weight, color);
+            if (!item.disabled) {
+                int index = i;
+                int hx = (int) Math.round(hx0 / s), hr = (int) Math.round(hx1 / s);
+                int hy = (int) Math.floor(py), hb = (int) Math.ceil(py + ph);
+                hits.add(hx, hy, hr - hx, hb - hy, b -> pick.accept(index));
+            }
+        }
+        return hovered;
     }
 
     /** Заглавная подпись с разрядкой, кегль и разрядка из макета (11 и 0.08em дают 11 и 0.44). */

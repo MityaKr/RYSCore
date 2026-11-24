@@ -54,8 +54,8 @@ assets/<namespace>/ryscore_themes/<имя>.json
 | Текст | `text.primary`, `text.body`, `text.secondary`, `text.muted`, `text.dim`, `link` |
 | Акцент и состояния | `accent`, `accent.text`, `state.ok`, `state.warn`, `state.bad`, `state.order`, `callout.bg`, `callout.border` |
 | Слоты и ячейки | `slot.bg`, `slot.border`, `slot.hover`, `slot.have.border`, `slot.miss.border`, `cell.bg`, `cell.border`, `plate.bg`, `plate.border` |
-| Кнопки, поля, вкладки | `button.bg`, `button.border`, `button.fg`, `input.bg`, `input.border`, `tab.active.bg`, `tab.active.fg`, `tab.inactive.bg`, `tab.inactive.fg`, `filter.active.bg`, `scroll.thumb` |
-| Чипы и подсказки | `chip.mod.*`, `chip.fn.*`, `chip.tag.*` (`.bg`, `.fg`), `tooltip.bg`, `tooltip.border` |
+| Кнопки, поля, вкладки | `button.bg`, `button.border`, `button.fg`, `input.bg`, `input.border`, `search.bg`, `tab.active.bg`, `tab.active.fg`, `tab.inactive.bg`, `tab.inactive.fg`, `filter.active.bg`, `scroll.thumb` |
+| Чипы и подсказки | `chip.mod.*`, `chip.fn.*`, `chip.tag.*` (`.bg`, `.fg`), `tooltip.bg`, `tooltip.border`, `tooltip.fg` (подсказки семьи в цвет темы: в vanilla светлые с тёмным текстом) |
 | Поверх мира | `hud.bg`, `hud.border`, `hud.fg`, `hud.muted`, `wheel.*` (колесо действий) |
 | Карта и награды | `map.bg`, `map.grid`, `map.draft`, `map.label.bg`, `map.label.fg`, `map.node.done`, `map.node.open`, `map.node.locked`, `medal.bronze`, `medal.silver`, `medal.gold`, `coin`, `cat.1` … `cat.12` |
 | Фаска (тема с `bevel`) | `panel.bevel.light`, `panel.bevel.dark`, `slot.bevel.light`, `slot.bevel.dark` |
