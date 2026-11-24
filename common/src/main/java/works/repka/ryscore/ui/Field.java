@@ -11,7 +11,9 @@ import works.repka.ryscore.theme.ThemeManager;
 
 /**
  * Поле ввода с текстом темы и чипами, как в макете поиска. Логику ввода даёт EditBox игры,
- * здесь отрисовка и перевод клика в позицию курсора.
+ * здесь отрисовка и перевод клика в позицию курсора. С 1.17.3 так рисуется и в теме без своего шрифта (vanilla): текст
+ * шрифтом игры, но в кегле макета, как подписи {@link Draw#label}; раньше EditBox рисовал его в полный рост, и подсказка
+ * поиска книги наезжала на клавишу «/».
  */
 public class Field extends EditBox {
     /** Часть текста с плашкой: {@code kind} это вид чипа темы (mod, tag, fn). */
@@ -22,6 +24,8 @@ public class Field extends EditBox {
     private List<Span> spans = List.of();
     private int[] colors = new int[0];
     private Component hintText;
+    /** Токены текста и подсказки (с 1.17.3): поле на светлой подложке в теме с фаской берёт тёмный текст. */
+    private String fgToken = "input.fg", hintToken = "text.dim";
     private float view;
     private long blinkFrom = System.currentTimeMillis();
 
@@ -34,6 +38,16 @@ public class Field extends EditBox {
     public void setHint(Component hint) {
         hintText = hint;
         super.setHint(hint);
+    }
+
+    /**
+     * Токены цвета текста и подсказки (по умолчанию {@code input.fg} и {@code text.dim}). Для поля, которое рисует свою светлую
+     * подложку, например поиск книги в теме vanilla: {@code colors("text.primary", "text.dim")}.
+     */
+    public Field colors(String fgToken, String hintToken) {
+        this.fgToken = fgToken;
+        this.hintToken = hintToken;
+        return this;
     }
 
     /** Чипы и цвета символов; вызывается перед отрисовкой. */
@@ -63,7 +77,7 @@ public class Field extends EditBox {
             previous = span;
             x[i] = pen;
             if (n == 2) x[i + 1] = pen;
-            pen += span != null ? Type.advance(cp, CHIP_PX, Type.Weight.MEDIUM) : Type.advance(cp, TEXT_PX, Type.Weight.REGULAR);
+            pen += span != null ? advance(cp, CHIP_PX, Type.Weight.MEDIUM) : advance(cp, TEXT_PX, Type.Weight.REGULAR);
             i += n;
         }
         if (previous != null) pen += CHIP_PAD;
@@ -71,19 +85,21 @@ public class Field extends EditBox {
         return x;
     }
 
+    /** Ширина символа в кегле макета: шрифт темы или, в теме без него, шрифт игры в том же масштабе, что у {@link Draw#label}. */
+    private static float advance(int codepoint, float designPx, Type.Weight weight) {
+        if (ThemeManager.get().usesType() && Type.available()) return Type.advance(codepoint, designPx, weight);
+        return Draw.labelWidth(Character.toString(codepoint), designPx, weight);
+    }
+
     @Override
     public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         Theme theme = ThemeManager.get();
-        if (!theme.usesType()) {
-            super.renderWidget(g, mouseX, mouseY, partialTick);
-            return;
-        }
         if (!isVisible()) return;
         String value = getValue();
         float left = getX(), cy = getY() + getHeight() / 2f;
         int inner = getInnerWidth();
         if (value.isEmpty() && !isFocused() && hintText != null) {
-            Draw.label(g, hintText.getString(), left, cy, TEXT_PX, Type.Weight.REGULAR, theme.c("text.dim"));
+            Draw.label(g, hintText.getString(), left, cy, TEXT_PX, Type.Weight.REGULAR, theme.c(hintToken));
             return;
         }
         float[] x = offsets(value);
@@ -97,7 +113,7 @@ public class Field extends EditBox {
         for (Span s : spans) {
             if (s.end > value.length() || s.start >= s.end) continue;
             float x0 = origin + x[s.start] - CHIP_PAD;
-            float x1 = origin + x[s.end - 1] + Type.advance(value.codePointBefore(s.end), CHIP_PX, Type.Weight.MEDIUM) + CHIP_PAD;
+            float x1 = origin + x[s.end - 1] + advance(value.codePointBefore(s.end), CHIP_PX, Type.Weight.MEDIUM) + CHIP_PAD;
             Draw.round(g, x0, cy - 4.75f, x1 - x0, 9.5f, theme.m("chip.radius", 6f) / 2f, theme.c("chip." + s.kind + ".bg"));
         }
         String highlighted = getHighlighted();
@@ -106,7 +122,7 @@ public class Field extends EditBox {
             int a = forward ? cursor : cursor - highlighted.length(), b = a + highlighted.length();
             if (a >= 0) Draw.round(g, origin + x[a], cy - 5f, x[b] - x[a], 10f, 0.02f, Draw.alpha(theme.c("accent"), 0.35f));
         }
-        int base = theme.c("input.fg");
+        int base = theme.c(fgToken);
         int i = 0;
         while (i < value.length()) {
             Span span = spanAt(i);
@@ -117,7 +133,8 @@ public class Field extends EditBox {
             i = j;
         }
         if (isFocused() && ((System.currentTimeMillis() - blinkFrom) / 500) % 2 == 0) {
-            Draw.round(g, origin + end, cy - 4.5f, 0.5f, 9f, 0.02f, theme.c("text.body"));
+            // в теме с фаской поле тёмное, а text.body тёмный: курсор цвета текста поля
+            Draw.round(g, origin + end, cy - 4.5f, 0.5f, 9f, 0.02f, theme.c(theme.beveled() ? fgToken : "text.body"));
         }
         g.disableScissor();
     }
@@ -128,10 +145,6 @@ public class Field extends EditBox {
 
     @Override
     public void onClick(double mouseX, double mouseY) {
-        if (!ThemeManager.get().usesType()) {
-            super.onClick(mouseX, mouseY);
-            return;
-        }
         blinkFrom = System.currentTimeMillis();
         float[] x = offsets(getValue());
         double target = mouseX - getX() + view;

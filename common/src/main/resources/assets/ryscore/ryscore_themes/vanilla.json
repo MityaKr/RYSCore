@@ -17,6 +17,7 @@
     "slot.hover": "#ffffff",
     "input.bg": "#000000",
     "input.fg": "#e6e6e6",
+    "search.bg": "#e6e6e6",
     "button.bg": "#a0a0a0",
     "text.primary": "#3f3f3f",
     "text.body": "#3f3f3f",
